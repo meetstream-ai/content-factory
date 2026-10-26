@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content Factory</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #111827; --muted: #6b7280; --line: #e5e7eb;
+  --accent: #2563eb; --accent-ink: #ffffff; --ok: #047857; --ok-bg: #d1fae5; --warn: #92400e; --warn-bg: #fef3c7;
+  --err: #b91c1c; --err-bg: #fee2e2; --chip: #eef2ff; --chip-ink: #3730a3; --hl: #fef9c3;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0f17; --panel: #111827; --ink: #e5e7eb; --muted: #9ca3af; --line: #1f2937;
+    --accent: #3b82f6; --ok: #6ee7b7; --ok-bg: #064e3b; --warn: #fcd34d; --warn-bg: #451a03;
+    --err: #fca5a5; --err-bg: #450a0a; --chip: #1e1b4b; --chip-ink: #c7d2fe; --hl: #3f3a12;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 16px; margin: 0; }
+header .sp { flex: 1; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--chip-ink); }
+main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 420px; gap: 16px; padding: 16px 20px; align-items: start; }
+@media (max-width: 1200px) { main { grid-template-columns: 280px minmax(0, 1fr); } #sourcePane { grid-column: 1 / -1; } }
+@media (max-width: 760px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.panel + .panel { margin-top: 12px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+h3 { font-size: 15px; margin: 0; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+input, select, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+textarea { min-height: 90px; resize: vertical; }
+button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.ok { color: var(--ok); } button.bad { color: var(--err); }
+button:disabled { opacity: .5; cursor: default; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.tabs button.on { background: var(--chip); color: var(--chip-ink); border-color: transparent; }
+.muted { color: var(--muted); } .small { font-size: 12px; }
+.list { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+.list > div { padding: 6px 8px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.list > div:last-child { border-bottom: 0; }
+.list > div.sel, .list > div:hover { background: var(--chip); }
+.progress { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 8px 0; }
+.progress > div { height: 100%; background: var(--accent); transition: width .4s; }
+.stages { display: flex; flex-wrap: wrap; gap: 4px; }
+.stages span { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--line); color: var(--muted); }
+.stages span.done { background: var(--ok-bg); color: var(--ok); }
+.stages span.now { background: var(--chip); color: var(--chip-ink); }
+.counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 10px 0; }
+.counts div { border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.counts b { font-size: 18px; display: block; }
+.asset { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--panel); margin-bottom: 10px; }
+.asset header { all: unset; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.asset .body { margin: 10px 0; }
+.status { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--line); }
+.status.APPROVED { background: var(--ok-bg); color: var(--ok); }
+.status.REJECTED { background: var(--err-bg); color: var(--err); }
+.status.CHANGES_REQUESTED { background: var(--warn-bg); color: var(--warn); }
+.qa { font-size: 12px; padding: 4px 8px; border-radius: 6px; margin: 4px 0; }
+.qa.error { background: var(--err-bg); color: var(--err); }
+.qa.warning { background: var(--warn-bg); color: var(--warn); }
+.qa.info { background: var(--chip); color: var(--chip-ink); }
+.ts { display: inline-block; font-size: 11px; font-variant-numeric: tabular-nums; padding: 0 6px; margin: 0 2px; border-radius: 4px; background: var(--chip); color: var(--chip-ink); cursor: pointer; border: 0; }
+.ts:hover { outline: 1px solid var(--accent); }
+.para { margin: 6px 0; }
+.quote { font-size: 16px; font-style: italic; }
+.label-ai { font-size: 11px; color: var(--warn); }
+pre { white-space: pre-wrap; font: 12px/1.5 ui-monospace, Menlo, monospace; background: var(--bg); padding: 8px; border-radius: 6px; margin: 6px 0; }
+video, audio { width: 100%; border-radius: 8px; background: #000; }
+.clipvids { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; align-items: start; }
+#sourcePane { position: sticky; top: 64px; }
+#transcript { max-height: calc(100vh - 420px); min-height: 200px; overflow: auto; margin-top: 10px; }
+#transcript p { margin: 0; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+#transcript p.hl { background: var(--hl); }
+#transcript p.now { outline: 1px solid var(--accent); }
+#transcript b { font-weight: 600; }
+.filter { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+.filter button.on { background: var(--chip); color: var(--chip-ink); border-color: transparent; }
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; z-index: 10; max-width: 90vw; }
+details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MeetStream Content Factory</h1>
+  <span class="sp"></span>
+  <span id="mode" class="badge"></span>
+</header>
+<main>
+  <aside>
+    <div class="panel">
+      <h2>New content package</h2>
+      <div class="tabs">
+        <button data-tab="ms" class="on">MeetStream recording</button>
+        <button data-tab="up">Upload</button>
+      </div>
+      <div id="tab-ms">
+        <div class="row"><button id="loadRecs">Load recordings</button><span id="recsNote" class="small muted"></span></div>
+        <div id="recs" class="list" style="margin-top:8px; display:none"></div>
+        <label>Bot ID</label><input id="botId" placeholder="Pick a recording above, or paste a bot id">
+      </div>
+      <div id="tab-up" style="display:none">
+        <label>Recording (MP4, MOV, WebM, MP3, WAV)</label><input id="upRec" type="file" accept=".mp4,.mov,.webm,.mkv,.mp3,.wav,.m4a">
+        <label>Transcript (MeetStream JSON, SRT, VTT)</label><input id="upTr" type="file" accept=".json,.srt,.vtt">
+      </div>
+      <label>Title</label><input id="title" placeholder="Building Production AI Agents">
+      <div class="row">
+        <div style="flex:1"><label>Audience</label><select id="audience"><option>developers</option><option>founders</option><option>marketers</option><option>general</option></select></div>
+        <div style="flex:1"><label>Tone</label><select id="tone"><option>technical</option><option>conversational</option><option>educational</option><option value="thought_leadership">thought leadership</option><option value="company_blog">company blog</option></select></div>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>Clips</label><input id="clipCount" type="number" min="1" max="12" value="5"></div>
+        <div style="flex:1"><label>Blog words</label><input id="blogWords" type="number" min="300" max="3000" step="100" value="1000"></div>
+      </div>
+      <label><input id="portrait" type="checkbox" checked style="width:auto"> Portrait (9:16) as well as landscape</label>
+      <label><input id="burn" type="checkbox" checked style="width:auto"> Burn in captions</label>
+      <div style="margin-top:10px"><button id="go" class="primary">Generate content package</button></div>
+    </div>
+    <div class="panel">
+      <h2>Jobs</h2>
+      <div id="jobs" class="list"></div>
+    </div>
+  </aside>
+
+  <section id="jobPane"><div class="panel empty">Start a package or pick a job.</div></section>
+
+  <section id="sourcePane" class="panel" style="display:none">
+    <h2>Source recording</h2>
+    <div id="player"></div>
+    <div class="small muted" id="nowAt"></div>
+    <div id="transcript"></div>
+  </section>
+</main>
+
+<script>
+/*
+ * Review dashboard. Plain JS, no build step; everything goes through the HTTP API (docs/API.md).
+ *
+ * Layout: left = new package form + job list; middle = selected job (progress, warnings,
+ * consent/export, review queue); right = source recording player + transcript.
+ *
+ * Routing: the selected job lives in the URL hash (#job=job_123), so links are shareable.
+ * While a job is queued/processing it is polled every 2 s; review opens when it finishes.
+ *
+ * Source linking: every asset cites transcript segment ids. tsChip() turns an id into a
+ * timestamp button; clicking it seeks the source player and highlights the transcript line.
+ *
+ * Auth: if the server sets CF_API_TOKEN, the token is asked for once and kept in localStorage.
+ * Media elements can't send headers, so media URLs carry it as ?access_token= (withToken()).
+ *
+ * The UI only shows actions the backend allows (asset.allowed_decisions), but the backend
+ * enforces every rule itself; nothing here is a security boundary.
+ */
+const P = "/api/v1/content-factory";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let token = null; try { token = localStorage.getItem("cfToken"); } catch {}
+let state = { job: null, assets: [], transcript: null, segIndex: {}, filter: "all", poll: null };
+
+const TYPE_LABEL = { chapters: "Chapters", content_brief: "Content brief", clip: "Clips", blog: "Blog", linkedin_post: "LinkedIn",
+  quote: "Quotes", takeaway: "Takeaways", visual_brief: "Visual briefs" };
+const ORDER = ["clip", "blog", "linkedin_post", "quote", "takeaway", "visual_brief", "chapters", "content_brief"];
+const STAGE_LABEL = s => s.replace(/_/g, " ");
+
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 4000); }
+function clock(s) { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(x).padStart(2, "0"); }
+
+// fetch() wrapper: adds the token, JSON-encodes `opts.json`, and throws the API's `detail` message on errors.
+async function api(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers.Authorization = "Bearer " + token;
+  if (opts.json !== undefined) { headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(opts.json); }
+  const r = await fetch(path, { ...opts, headers });
+  if (!r.ok) { let d; try { d = (await r.json()).detail; } catch { d = r.statusText; } throw new Error(typeof d === "string" ? d : JSON.stringify(d)); }
+  return r.json();
+}
+const withToken = url => token ? url + (url.includes("?") ? "&" : "?") + "access_token=" + encodeURIComponent(token) : url;
+
+// ---------------------------------------------------------------- new job
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("#tab-ms").style.display = b.dataset.tab === "ms" ? "" : "none";
+  $("#tab-up").style.display = b.dataset.tab === "up" ? "" : "none";
+});
+
+$("#loadRecs").onclick = async () => {
+  $("#recsNote").textContent = "Loading...";
+  try {
+    const data = await api("/api/v1/meetstream/recordings");
+    const box = $("#recs"); box.style.display = ""; box.innerHTML = "";
+    $("#recsNote").textContent = data.recordings.length + " bots";
+    data.recordings.forEach(r => {
+      const d = document.createElement("div");
+      d.innerHTML = `<b>${esc(r.name || r.bot_id)}</b><div class="small muted">${esc(r.platform || "")} · ${esc(r.status || "")} · ${esc((r.created_at || "").slice(0, 16).replace("T", " "))}</div>`;
+      d.onclick = () => { box.querySelectorAll("div").forEach(x => x.classList.remove("sel")); d.classList.add("sel"); $("#botId").value = r.bot_id;
+        if (!$("#title").value) $("#title").value = r.name || ""; };
+      box.append(d);
+    });
+  } catch (e) { $("#recsNote").textContent = e.message; }
+};
+
+// The job configuration from the form (a subset of JobConfig; the rest use server defaults).
+function config() {
+  return { audience: $("#audience").value, tone: $("#tone").value, clip_count: +$("#clipCount").value,
+    blog_word_count: +$("#blogWords").value, burn_captions: $("#burn").checked,
+    clip_formats: $("#portrait").checked ? ["landscape", "portrait"] : ["landscape"] };
+}
+
+$("#go").onclick = async () => {
+  const btn = $("#go"); btn.disabled = true;
+  try {
+    let job;
+    if ($("#tab-ms").style.display !== "none") {
+      const bot = $("#botId").value.trim(); if (!bot) throw new Error("Pick a MeetStream recording first.");
+      job = await api(P + "/jobs", { method: "POST", json: { source: { type: "meetstream_recording", recording_id: bot, title: $("#title").value || null }, configuration: config() } });
+    } else {
+      const fd = new FormData();
+      if ($("#upRec").files[0]) fd.append("recording", $("#upRec").files[0]);
+      if ($("#upTr").files[0]) fd.append("transcript", $("#upTr").files[0]);
+      fd.append("title", $("#title").value || "Untitled webinar");
+      fd.append("configuration", JSON.stringify(config()));
+      job = await api(P + "/uploads", { method: "POST", body: fd });
+    }
+    location.hash = "job=" + job.job_id;
+    loadJobs();
+  } catch (e) { toast(e.message); } finally { btn.disabled = false; }
+};
+
+async function loadJobs() {
+  const jobs = await api(P + "/jobs");
+  $("#jobs").innerHTML = jobs.map(j => `<div data-id="${j.job_id}" class="${state.job && state.job.job_id === j.job_id ? "sel" : ""}">
+    <b>${esc(j.title || j.job_id)}</b><div class="small muted">${esc(j.status.replace(/_/g, " "))} · ${j.progress}% · ${esc(j.created_at.slice(0, 16).replace("T", " "))}</div></div>`).join("")
+    || `<div class="muted small">No jobs yet.</div>`;
+  $("#jobs").querySelectorAll("[data-id]").forEach(d => d.onclick = () => location.hash = "job=" + d.dataset.id);
+}
+
+// ---------------------------------------------------------------- job view
+async function openJob(id) {
+  clearTimeout(state.poll);
+  state = { ...state, job: null, assets: [], transcript: null, segIndex: {} };
+  await refreshJob(id);
+}
+
+// Reload the job; once ingest is done load the transcript (once), once finished load the assets.
+async function refreshJob(id) {
+  const job = await api(`${P}/jobs/${id}`);
+  const firstLoad = !state.job || state.job.job_id !== id;
+  state.job = job;
+  if (job.webinar && !state.transcript && job.completed.includes("ingest")) {
+    try { state.transcript = await api(`${P}/jobs/${id}/transcript`); state.segIndex = Object.fromEntries(state.transcript.segments.map((s, i) => [s.id, i])); renderSource(); } catch {}
+  }
+  if (job.status === "awaiting_review") state.assets = await api(`${P}/jobs/${id}/assets`);
+  renderJob();
+  if (firstLoad) loadJobs();
+  if (job.status === "queued" || job.status === "processing") state.poll = setTimeout(() => refreshJob(id), 2000);
+  else loadJobs();
+}
+
+// Whole middle column: header + progress, warnings, consent/export bar, filters, asset cards.
+function renderJob() {
+  const j = state.job, pane = $("#jobPane");
+  const title = j.webinar ? j.webinar.title : (j.source.title || j.source.bot_id || "Content job");
+  const stages = [...j.completed, ...j.pending];
+  let html = `<div class="panel"><div class="row"><h3 style="flex:1">${esc(title)}</h3><span class="status">${esc(j.status.replace(/_/g, " "))}</span></div>
+    <div class="small muted">${j.webinar ? clock(j.webinar.duration_seconds || 0) + " · " : ""}${esc(j.source.type === "meetstream_recording" ? "MeetStream bot " + j.source.bot_id : "Upload")} · generator: ${esc(j.generator || "-")}</div>
+    <div class="progress"><div style="width:${j.progress}%"></div></div>
+    <div class="stages">${stages.map(s => `<span class="${j.completed.includes(s) ? "done" : (s === j.current_stage ? "now" : "")}">${esc(STAGE_LABEL(s))}</span>`).join("")}</div>`;
+  if (j.error_message) html += `<div class="qa error" style="margin-top:8px">${esc(j.error_message)}</div><button id="retry" style="margin-top:6px">Retry from failed stage</button>`;
+  j.warnings.forEach(w => html += `<div class="qa ${w.level}">${esc(w.message)}${(w.segment_ids || []).map(tsChip).join("")}</div>`);
+  html += `</div>`;
+
+  if (j.status === "awaiting_review") {
+    const counts = {}; state.assets.forEach(a => { counts[a.asset_type] = counts[a.asset_type] || { n: 0, ok: 0 }; counts[a.asset_type].n++; if (a.status === "APPROVED") counts[a.asset_type].ok++; });
+    const approved = state.assets.filter(a => a.status === "APPROVED").length;
+    html += `<div class="panel"><div class="counts">${ORDER.filter(t => counts[t]).map(t => `<div><b>${counts[t].n}</b>${TYPE_LABEL[t]}<div class="small muted">${counts[t].ok} approved</div></div>`).join("")}</div>
+      <div class="row">
+        ${j.consent_confirmed ? `<span class="small muted">Consent: ${esc(j.consent_note)}</span>` :
+          `<button id="consent">Confirm speaker consent &amp; reuse rights</button>`}
+        <span class="sp" style="flex:1"></span>
+        <button id="export" class="primary" ${approved && j.consent_confirmed ? "" : "disabled"}>Export ${approved} approved asset${approved === 1 ? "" : "s"}</button>
+      </div>
+      ${j.exports.filter(e => e.export_status === "completed").slice(0, 1).map(e => `<div class="small" style="margin-top:6px"><a href="${withToken(`${P}/exports/${e.id}/download`)}">Download last export</a> <span class="muted">(${esc(e.exported_at)})</span></div>`).join("")}
+      <div class="small muted" style="margin-top:6px">Nothing is published. Export packages approved assets into a ZIP.</div></div>`;
+    html += `<div class="filter">${["all", "PENDING_REVIEW", ...ORDER.filter(t => counts[t])].map(f => `<button data-f="${f}" class="${state.filter === f ? "on" : ""}">${f === "all" ? "All" : f === "PENDING_REVIEW" ? "Needs review" : TYPE_LABEL[f]}</button>`).join("")}</div>`;
+    const shown = state.assets.filter(a => state.filter === "all" || a.asset_type === state.filter || a.status === state.filter)
+      .sort((a, b) => ORDER.indexOf(a.asset_type) - ORDER.indexOf(b.asset_type) || a.position - b.position);
+    html += `<div id="assets">${shown.map(assetCard).join("") || `<div class="panel empty">Nothing here.</div>`}</div>`;
+  }
+  pane.innerHTML = html;
+  bindJob();
+}
+
+// A clickable timestamp for a transcript segment id; the tooltip shows what was said there.
+function tsChip(segId) {
+  const i = state.segIndex[segId]; if (i === undefined) return "";
+  const s = state.transcript.segments[i];
+  return `<button class="ts" data-seg="${esc(segId)}" title="${esc(s.speaker)}: ${esc(s.text.slice(0, 120))}">${clock(s.start)}</button>`;
+}
+const chips = ids => [...new Set(ids || [])].map(tsChip).join("");
+const timeChip = (t, label) => `<button class="ts" data-t="${t}">${label || clock(t)}</button>`;
+
+// Type-specific rendering of an asset's content. Citations become timestamp chips.
+function assetBody(a) {
+  const c = a.content, f = a.file_urls;
+  switch (a.asset_type) {
+    case "clip": {
+      const vids = ["landscape", "portrait", "square"].filter(k => f[k]);
+      const vtt = f.vtt ? `<track kind="captions" src="${withToken(f.vtt)}" srclang="en" label="Captions">` : "";
+      const track = state.job.configuration.burn_captions ? "" : vtt;
+      const media = vids.length ? `<div class="clipvids">${vids.map(k => `<div><video controls preload="metadata" src="${withToken(f[k])}">${track}</video><div class="small muted">${k}</div></div>`).join("")}</div>`
+        : f.audio ? `<audio controls src="${withToken(f.audio)}"></audio>` : `<div class="muted small">Not rendered.</div>`;
+      return `${media}<div class="row small" style="margin-top:6px">${timeChip(c.start)}–${timeChip(c.end)} <span class="muted">${c.duration.toFixed(1)}s · score ${c.score}</span>
+        ${["srt", "vtt"].filter(k => f[k]).map(k => `<a href="${withToken(f[k])}" download>${k.toUpperCase()}</a>`).join(" ")}</div>
+        <div class="small" style="margin-top:4px">${esc(c.reason)}</div>
+        <details><summary>Transcript and scoring</summary><p>${esc(c.transcript_text)}</p><pre>${esc(JSON.stringify(c.score_breakdown, null, 1))}</pre></details>`;
+    }
+    case "blog": {
+      const p = ps => ps.map(x => `<p class="para">${esc(x.text)} ${chips(x.segment_ids)}</p>`).join("");
+      return `<div class="small muted">${esc(c.meta_description)}</div><p><i>${esc(c.excerpt)}</i></p>${p(c.introduction)}
+        ${c.sections.map(s => `<h4>${esc(s.heading)}</h4>${p(s.paragraphs)}`).join("")}<h4>Conclusion</h4>${p(c.conclusion)}
+        <h4>Key takeaways</h4><ul>${c.key_takeaways.map(k => `<li>${esc(k)}</li>`).join("")}</ul>
+        <div class="small muted">Keywords: ${esc(c.keywords.join(", "))}</div>`;
+    }
+    case "linkedin_post":
+      return `<pre style="font-family:inherit;font-size:14px">${esc(c.text)}</pre><div class="small">${esc(c.hashtags.join(" "))}</div><div>${chips(c.segment_ids)}</div>`;
+    case "quote":
+      return `<div class="quote">“${esc(c.quote)}”</div><div class="small">— ${esc(c.speaker || "speaker uncertain")} ${chips(c.segment_ids)} ${c.confidence ? `<span class="muted">transcript confidence ${(c.confidence * 100).toFixed(0)}%</span>` : ""}</div>`;
+    case "takeaway":
+      return `<div class="label-ai">${esc(c.label)}</div><div class="quote" style="font-style:normal">${esc(c.text)}</div><div>${chips(c.segment_ids)}</div>`;
+    case "visual_brief":
+      return `<div class="small muted">${esc(c.kind.replace("_", " "))} · ${esc(c.aspect_ratio)} · ${esc(c.layout)}</div>
+        ${c.quote ? `<div class="quote">“${esc(c.quote)}”</div><div class="small">— ${esc(c.speaker || "")}</div>` : ""}
+        <p class="small">${esc(c.visual_direction)}</p>
+        ${c.slides.length ? `<ol>${c.slides.map(s => `<li><b>${esc(s.headline)}</b> ${esc(s.body)} <span class="muted small">(${esc(s.visual)})</span></li>`).join("")}</ol>` : ""}
+        <div>${chips(c.segment_ids)}</div>`;
+    case "chapters":
+      return `<ol>${c.chapters.map(ch => `<li>${timeChip(ch.start)} <b>${esc(ch.title)}</b> <span class="small muted">${esc(ch.summary)}</span></li>`).join("")}</ol>
+        <details><summary>YouTube description chapters</summary><pre>${esc(c.youtube_chapters)}</pre></details>`;
+    case "content_brief":
+      return `<p><b>${esc(c.primary_message)}</b></p><div class="small muted">${esc(c.target_audience)} · ${esc(c.tone)} · CTA: ${esc(c.call_to_action)}</div>
+        <ul>${c.key_takeaways.map(t => `<li>${esc(t.text)} ${chips(t.segment_ids)}</li>`).join("")}</ul>`;
+  }
+  return `<pre>${esc(JSON.stringify(c, null, 2))}</pre>`;
+}
+
+function assetCard(a) {
+  const d = a.allowed_decisions, can = x => d.includes(x);
+  return `<div class="asset" data-id="${a.id}">
+    <header><span class="badge">${esc(TYPE_LABEL[a.asset_type] || a.asset_type)}</span><h3 style="flex:1">${esc(a.title)}</h3>
+      <span class="small muted">v${a.version}</span><span class="status ${a.status}">${esc(a.status.replace(/_/g, " "))}</span></header>
+    ${a.qa.filter(n => n.code !== "word_count").map(n => `<div class="qa ${n.level}">${esc(n.message)}</div>`).join("")}
+    ${a.qa.filter(n => n.code === "word_count").map(n => `<div class="small muted">${esc(n.message)}</div>`).join("")}
+    <div class="body">${assetBody(a)}</div>
+    <div class="editor"></div>
+    <div class="row">
+      ${can("approve") ? `<button class="ok" data-act="approve">Approve</button>` : ""}
+      ${can("request_changes") ? `<button data-act="request-changes">Request changes</button>` : ""}
+      ${can("edit") ? `<button data-act="edit">Edit</button>` : ""}
+      ${can("regenerate") ? `<button data-act="regenerate">New variation</button>` : ""}
+      ${can("reject") ? `<button class="bad" data-act="reject">Reject</button>` : ""}
+      ${can("reopen") ? `<button data-act="reopen">Reopen</button>` : ""}
+    </div></div>`;
+}
+
+// Inline editor per type. Clips edit times (and re-render); text types edit text; others edit raw JSON.
+function editorFor(a) {
+  const c = a.content;
+  switch (a.asset_type) {
+    case "clip": return `<div class="row"><div><label>Start (s)</label><input name="start" type="number" step="0.1" value="${c.start}"></div>
+      <div><label>End (s)</label><input name="end" type="number" step="0.1" value="${c.end}"></div><div style="flex:1"><label>Title</label><input name="title" value="${esc(a.title)}"></div></div>
+      <div class="small muted">Saving re-renders the clip and its captions.</div>`;
+    case "linkedin_post": return `<label>Post</label><textarea name="text" rows="10">${esc(c.text)}</textarea>`;
+    case "quote": return `<label>Quote (must match the speaker's words)</label><textarea name="quote">${esc(c.quote)}</textarea>`;
+    case "takeaway": return `<label>Takeaway</label><textarea name="text">${esc(c.text)}</textarea>`;
+    default: return `<label>Content (JSON)</label><textarea name="json" rows="16" style="font-family:ui-monospace,Menlo,monospace;font-size:12px">${esc(JSON.stringify(c, null, 2))}</textarea>`;
+  }
+}
+
+// Turn the editor's inputs into a PATCH body (only changed fields; the server merges them).
+function patchFromEditor(a, ed) {
+  const v = n => ed.querySelector(`[name=${n}]`)?.value;
+  switch (a.asset_type) {
+    case "clip": return { title: v("title"), content: { start: +v("start"), end: +v("end") } };
+    case "linkedin_post": return { content: { text: v("text") } };
+    case "quote": return { content: { quote: v("quote") } };
+    case "takeaway": return { content: { text: v("text") } };
+    default: return { content: JSON.parse(v("json")) };
+  }
+}
+
+function bindJob() {
+  $("#retry")?.addEventListener("click", async () => { try { await api(`${P}/jobs/${state.job.job_id}/retry`, { method: "POST" }); refreshJob(state.job.job_id); } catch (e) { toast(e.message); } });
+  $("#consent")?.addEventListener("click", async () => {
+    const note = prompt("Confirm that the speakers agreed to having this recording repurposed into public content, and that you have the rights to reuse any third-party material in it. Add a note (optional):", "Speakers consented; no third-party material");
+    if (note === null) return;
+    try { await api(`${P}/jobs/${state.job.job_id}/consent`, { method: "POST", json: { reviewer: "reviewer", note } }); refreshJob(state.job.job_id); } catch (e) { toast(e.message); }
+  });
+  $("#export")?.addEventListener("click", async () => {
+    try { const e = await api(`${P}/jobs/${state.job.job_id}/export`, { method: "POST" }); location.href = withToken(e.download_url); refreshJob(state.job.job_id); } catch (e) { toast(e.message); }
+  });
+  document.querySelectorAll(".filter button").forEach(b => b.onclick = () => { state.filter = b.dataset.f; renderJob(); });
+  document.querySelectorAll(".ts").forEach(b => b.onclick = () => {
+    if (b.dataset.seg) seekToSegment(b.dataset.seg); else seek(+b.dataset.t);
+  });
+  document.querySelectorAll(".asset").forEach(card => card.querySelectorAll("[data-act]").forEach(b => b.onclick = () => act(card, b.dataset.act)));
+}
+
+// Handle a review button. Actions that need words (request changes, regenerate, approving
+// despite QA errors) prompt for them, since the backend refuses those requests without text.
+async function act(card, action) {
+  const a = state.assets.find(x => x.id === card.dataset.id);
+  const url = `${P}/assets/${a.id}`;
+  try {
+    let updated;
+    if (action === "edit") {
+      const ed = $(".editor", card);
+      if (ed.innerHTML) { ed.innerHTML = ""; return; }
+      ed.innerHTML = editorFor(a) + `<div class="row" style="margin:8px 0"><button class="primary" data-save>Save as v${a.version + 1}</button><button data-cancel>Cancel</button></div>`;
+      $("[data-cancel]", ed).onclick = () => ed.innerHTML = "";
+      $("[data-save]", ed).onclick = async () => {
+        const btn = $("[data-save]", ed); btn.disabled = true; btn.textContent = "Saving...";
+        try { const p = patchFromEditor(a, ed); replaceAsset(await api(url, { method: "PATCH", json: { reviewer: "reviewer", ...p } })); toast("Saved and back in the queue."); }
+        catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Save"; }
+      };
+      return;
+    }
+    let feedback = null;
+    if (action === "request-changes" || action === "regenerate") {
+      feedback = prompt(action === "regenerate" ? "What should the new variation do differently?" : "What should change?");
+      if (!feedback) return;
+    }
+    if (action === "approve" && a.qa.some(n => n.level === "error")) {
+      feedback = prompt("This asset has QA errors. Note why it's fine to approve:");
+      if (!feedback) return;
+    }
+    card.style.opacity = .5;
+    updated = await api(`${url}/${action}`, { method: "POST", json: { reviewer: "reviewer", feedback } });
+    replaceAsset(updated);
+  } catch (e) { toast(e.message); card.style.opacity = 1; }
+}
+
+function replaceAsset(updated) {
+  state.assets = state.assets.map(x => x.id === updated.id ? updated : x);
+  renderJob();
+}
+
+// ---------------------------------------------------------------- source player + transcript
+// Source player (video or audio) and the full transcript; the current line follows playback.
+function renderSource() {
+  const pane = $("#sourcePane"), j = state.job;
+  pane.style.display = "";
+  const src = withToken(`${P}/jobs/${j.job_id}/recording`);
+  $("#player").innerHTML = j.webinar && j.webinar.has_video ? `<video id="src" controls preload="metadata" src="${src}"></video>` : `<audio id="src" controls preload="metadata" src="${src}"></audio>`;
+  $("#transcript").innerHTML = state.transcript.segments.map(s => `<p data-seg="${s.id}" data-t="${s.start}"><span class="ts">${clock(s.start)}</span> <b>${esc(s.speaker)}:</b> ${esc(s.text)}</p>`).join("");
+  $("#transcript").querySelectorAll("p").forEach(p => p.onclick = () => seek(+p.dataset.t));
+  const media = $("#src");
+  media.addEventListener("timeupdate", () => {
+    const t = media.currentTime; $("#nowAt").textContent = clock(t);
+    const segs = state.transcript.segments; let cur = null;
+    for (const s of segs) { if (s.start <= t && t < s.end + 0.5) cur = s.id; }
+    document.querySelectorAll("#transcript p.now").forEach(p => p.classList.remove("now"));
+    if (cur) $(`#transcript p[data-seg="${cur}"]`)?.classList.add("now");
+  });
+}
+
+function seek(t) {
+  const m = $("#src"); if (!m) return;
+  m.currentTime = t; m.play().catch(() => {});
+  $("#sourcePane").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function seekToSegment(id) {
+  const i = state.segIndex[id]; if (i === undefined) return;
+  document.querySelectorAll("#transcript p.hl").forEach(p => p.classList.remove("hl"));
+  const p = $(`#transcript p[data-seg="${id}"]`); p.classList.add("hl"); p.scrollIntoView({ block: "center", behavior: "smooth" });
+  seek(state.transcript.segments[i].start);
+}
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  const h = await (await fetch("/api/v1/health")).json();
+  if (h.auth_required && !token) { token = prompt("API token"); try { localStorage.setItem("cfToken", token); } catch {} }
+  $("#mode").textContent = h.llm_mode === "claude" ? "Claude · " + h.model : "Offline mode (no LLM): heuristic drafts";
+  if (!h.meetstream_configured) { $("#recsNote").textContent = "MEETSTREAM_API_KEY not set on the server"; $("#loadRecs").disabled = true; }
+  loadJobs();
+  route();
+}
+function route() { const m = location.hash.match(/job=([\w-]+)/); if (m) openJob(m[1]); }
+window.addEventListener("hashchange", route);
+boot();
+</script>
+</body>
+</html>
