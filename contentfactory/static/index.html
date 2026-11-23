@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content Factory</title>
+<style>
+:root {
+  --bg: #f5f6f8; --panel: #ffffff; --ink: #111827; --muted: #6b7280; --faint: #9ca3af; --line: #e5e7eb;
+  --accent: #4f46e5; --accent-soft: #eef2ff; --accent-ink: #ffffff;
+  --ok: #047857; --ok-bg: #d1fae5; --warn: #92400e; --warn-bg: #fef3c7; --err: #b91c1c; --err-bg: #fee2e2;
+  --hl: #fef9c3; --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 1px 8px rgb(0 0 0 / .04);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b0f17; --panel: #121826; --ink: #e5e7eb; --muted: #9ca3af; --faint: #6b7280; --line: #232b3b;
+    --accent: #818cf8; --accent-soft: #1e1b4b; --accent-ink: #0b0f17;
+    --ok: #6ee7b7; --ok-bg: #064e3b; --warn: #fcd34d; --warn-bg: #422006; --err: #fca5a5; --err-bg: #450a0a;
+    --hl: #3f3a12; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+h1, h2, h3, h4 { margin: 0; line-height: 1.3; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 12px 24px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+.brand { font-weight: 700; color: var(--ink); } .brand:hover { text-decoration: none; }
+.brand span { color: var(--muted); font-weight: 400; }
+.sp { flex: 1; }
+.mode { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); cursor: help; }
+.mode.off { background: var(--warn-bg); color: var(--warn); }
+.mode { border: 0; font: inherit; font-size: 12px; cursor: pointer; }
+.keystate { font-size: 12px; margin-left: 6px; }
+.keystate.ok { color: var(--ok); } .keystate.none { color: var(--warn); }
+.formmsg { margin-top: 12px; font-size: 14px; }
+.formmsg.err { color: var(--err); background: var(--err-bg); padding: 8px 12px; border-radius: 8px; }
+.formmsg.ok { color: var(--ok); }
+.hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.muted { color: var(--muted); } .small { font-size: 13px; }
+
+/* controls */
+input, select, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+textarea { min-height: 80px; resize: vertical; }
+label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+label.check { display: flex; gap: 10px; align-items: flex-start; color: var(--ink); font-size: 14px; }
+label.check input { width: auto; margin-top: 4px; }
+button { font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button.approve { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 600; }
+@media (prefers-color-scheme: dark) { button.approve { color: #0b0f17; } }
+button.reject { color: var(--err); }
+button.link { border: 0; background: none; padding: 0; color: var(--accent); }
+button.link:hover { text-decoration: underline; }
+button.lg { padding: 12px 22px; font-size: 16px; }
+
+/* home */
+.home { max-width: 820px; margin: 0 auto; padding: 48px 24px 64px; }
+.hero h1 { font-size: 30px; letter-spacing: -.01em; }
+.hero p { color: var(--muted); margin: 8px 0 24px; font-size: 16px; }
+.paste { display: flex; gap: 8px; }
+.paste input { font-size: 16px; padding: 12px 14px; }
+@media (max-width: 640px) { .paste { flex-direction: column; } }
+.lookup { margin-top: 10px; min-height: 24px; font-size: 14px; }
+.lookup .found { display: inline-flex; gap: 8px; align-items: center; color: var(--ok); }
+.lookup .problem { color: var(--warn); background: var(--warn-bg); padding: 8px 12px; border-radius: 8px; }
+.drop { margin-top: 18px; border: 2px dashed var(--line); border-radius: 12px; padding: 22px; text-align: center; color: var(--muted); cursor: pointer; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.drop b { color: var(--ink); }
+.or { text-align: center; color: var(--faint); font-size: 13px; margin: 14px 0 0; }
+.notice { background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 10px 14px; margin-top: 12px; font-size: 14px; }
+.under { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; font-size: 14px; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 14px; box-shadow: var(--shadow); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+@media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+.recs { display: grid; gap: 6px; max-height: 320px; overflow: auto; }
+.rec { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 10px 12px; }
+.rec .plat { font-size: 12px; font-weight: 600; width: 64px; color: var(--muted); }
+.rec .when { flex: 1; }
+.section-title { display: flex; align-items: baseline; gap: 12px; margin: 44px 0 12px; }
+.section-title h2 { font-size: 18px; }
+.pkgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.pkg { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; color: var(--ink); box-shadow: var(--shadow); }
+.pkg:hover { border-color: var(--accent); text-decoration: none; }
+.pkg > b { display: block; margin-bottom: 2px; }
+.pkg .state { margin-top: 10px; font-size: 13px; }
+.bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.bar > div { height: 100%; background: var(--accent); transition: width .4s; }
+.bar.ok > div { background: var(--ok); }
+.empty { padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
+
+/* job: making */
+.page { max-width: 1480px; margin: 0 auto; padding: 20px 24px 64px; }
+.back { font-size: 14px; }
+.jobhead { margin: 10px 0 18px; }
+.jobhead h1 { font-size: 24px; }
+.making { max-width: 620px; margin: 24px auto; }
+.steps { list-style: none; padding: 0; margin: 16px 0 0; }
+.steps li { display: flex; gap: 12px; align-items: center; padding: 7px 0; color: var(--faint); }
+.steps li .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; flex: none; }
+.steps li.done { color: var(--ink); } .steps li.done .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+.steps li.now { color: var(--ink); font-weight: 600; } .steps li.now .dot { border-color: var(--accent); border-top-color: transparent; animation: spin 1s linear infinite; }
+.steps li.failed { color: var(--err); font-weight: 600; } .steps li.failed .dot { background: var(--err); border-color: var(--err); color: #fff; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { background: var(--err-bg); color: var(--err); padding: 12px 14px; border-radius: 10px; margin-top: 16px; }
+
+/* job: review */
+.finish { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; box-shadow: var(--shadow); }
+.finish .tally { flex: 1; min-width: 240px; }
+.finish .hint { font-size: 12px; color: var(--muted); margin-top: 4px; text-align: right; }
+.heads-up { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 14px; margin-top: 12px; font-size: 14px; }
+.review { display: grid; grid-template-columns: 210px minmax(0, 1fr) 400px; gap: 20px; margin-top: 16px; align-items: start; }
+@media (max-width: 1200px) { .review { grid-template-columns: 190px minmax(0, 1fr); } .source { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .review { grid-template-columns: 1fr; } .page { padding: 16px; } }
+.nav { position: sticky; top: 72px; display: grid; gap: 2px; }
+@media (max-width: 760px) { .nav { position: static; display: flex; overflow-x: auto; gap: 6px; } .nav hr { display: none; } }
+.nav button { display: flex; justify-content: space-between; gap: 10px; border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 8px; }
+.nav button:hover { background: var(--accent-soft); }
+.nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav .n { color: var(--muted); font-size: 13px; font-weight: 400; }
+.nav .n.done { color: var(--ok); }
+.nav hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; width: 100%; }
+.listhead { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+.listhead div { flex: 1; min-width: 200px; }
+.listhead h2 { font-size: 18px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; box-shadow: var(--shadow); transition: opacity .25s; }
+.card.APPROVED { border-left: 4px solid var(--ok); }
+.card.REJECTED { opacity: .6; }
+.card.CHANGES_REQUESTED { border-left: 4px solid var(--warn); }
+.cardtop { display: flex; gap: 10px; align-items: flex-start; }
+.cardtop .kind { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.cardtop h3 { font-size: 16px; }
+.pill { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 99px; background: var(--line); color: var(--muted); white-space: nowrap; }
+.pill.APPROVED { background: var(--ok-bg); color: var(--ok); }
+.pill.REJECTED { background: var(--err-bg); color: var(--err); }
+.pill.CHANGES_REQUESTED { background: var(--warn-bg); color: var(--warn); }
+.pill.PENDING_REVIEW { background: var(--accent-soft); color: var(--accent); }
+.note { font-size: 13px; padding: 6px 10px; border-radius: 8px; margin-top: 8px; }
+.note.error { background: var(--err-bg); color: var(--err); }
+.note.warning { background: var(--warn-bg); color: var(--warn); }
+.note.info { color: var(--muted); padding: 0; }
+.body { margin: 12px 0; }
+.body p { margin: 0 0 10px; }
+.body h4 { margin: 16px 0 6px; font-size: 15px; }
+.from { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ts { display: inline-block; font-size: 12px; font-variant-numeric: tabular-nums; padding: 1px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); border: 0; cursor: pointer; vertical-align: 1px; }
+.ts::before { content: "▶ "; font-size: 9px; }
+.ts:hover { outline: 1px solid var(--accent); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.inline { margin-top: 12px; }
+.inline:empty { display: none; }
+.inline .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 4px 12px 12px; margin: 10px 0 0; }
+legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.quote { font-size: 18px; line-height: 1.5; }
+.post { white-space: pre-wrap; }
+.ai-label { font-size: 12px; color: var(--warn); }
+.tags { color: var(--accent); font-size: 14px; }
+.clipmedia video, .clipmedia audio { width: 100%; max-height: 340px; border-radius: 10px; background: #000; display: block; }
+.clipmedia.portrait video { width: auto; max-width: 100%; height: 380px; margin: 0 auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
+.seg button { border: 0; border-radius: 0; padding: 4px 12px; font-size: 13px; }
+.seg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.facts { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: 8px; align-items: center; }
+details { margin-top: 8px; } summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.source { position: sticky; top: 72px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+@media (max-width: 1200px) { .source { position: static; } }
+.source h2 { font-size: 15px; margin-bottom: 8px; }
+.source video, .source audio { width: 100%; border-radius: 8px; background: #000; display: block; }
+#transcript { max-height: calc(100vh - 440px); min-height: 220px; overflow: auto; margin-top: 10px; font-size: 14px; }
+#transcript p { margin: 0; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+#transcript p:hover { background: var(--bg); }
+#transcript p.hl { background: var(--hl); }
+#transcript p.now { box-shadow: inset 3px 0 0 var(--accent); }
+#transcript .t { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; margin-right: 6px; }
+dialog { border: 0; border-radius: 14px; padding: 22px; max-width: 520px; width: calc(100% - 32px); background: var(--panel); color: var(--ink); box-shadow: 0 20px 60px rgb(0 0 0 / .3); }
+dialog::backdrop { background: rgb(0 0 0 / .4); }
+dialog h3 { font-size: 18px; margin-bottom: 8px; }
+dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; z-index: 50; max-width: 90vw; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="brand" href="#">Content Factory <span>· MeetStream</span></a>
+  <span class="sp"></span>
+  <button id="mode" class="mode" title="Settings"></button>
+  <button id="openSettings">Settings</button>
+</div>
+<main id="app"></main>
+
+<dialog id="consent">
+  <form method="dialog">
+    <h3>One check before you download</h3>
+    <p class="muted small">This is recorded with the package, so anyone publishing it later knows it was cleared.</p>
+    <label class="check"><input type="checkbox" id="consentOk"> The speakers agreed to this recording being turned into public content, and we have the rights to any slides, music or other material in it.</label>
+    <label for="consentNote">Note (optional)</label>
+    <input id="consentNote" placeholder="e.g. Consent collected in the speaker agreement">
+    <div class="row"><button value="cancel">Cancel</button><button value="ok" id="consentGo" class="primary" disabled>Confirm and download</button></div>
+  </form>
+</dialog>
+
+<dialog id="settings">
+  <form method="dialog">
+    <h3>Settings</h3>
+    <p class="muted small">Each key is checked with OpenAI or MeetStream before it's saved. They're kept on this server, in <code>data/secrets.json</code>, and never shown again in full.</p>
+    <label for="oaKey">OpenAI API key <span class="keystate" id="oaState"></span></label>
+    <input id="oaKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
+    <div class="hint">Picks the best moments and writes the content. Without it, drafts are just the speakers' sentences rearranged. Get one at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.</div>
+    <label for="oaModel">OpenAI model</label>
+    <input id="oaModel" list="models" autocomplete="off">
+    <datalist id="models"><option value="gpt-5-mini"><option value="gpt-5"><option value="gpt-5-nano"></datalist>
+    <div class="hint">gpt-5-mini is the default; gpt-5 writes better, gpt-5-nano is cheaper.</div>
+    <label for="msKey">MeetStream API key <span class="keystate" id="msState"></span></label>
+    <input id="msKey" type="password" autocomplete="off" spellcheck="false" placeholder="ms_…">
+    <div class="hint">Optional. Lets you paste meeting links and bot ids, and uses MeetStream's transcripts with speaker names. Get one at <a href="https://app.meetstream.ai/api-key" target="_blank" rel="noopener">app.meetstream.ai/api-key</a>.</div>
+    <div class="formmsg" id="settingsMsg"></div>
+    <div class="row"><button value="cancel">Close</button><button type="button" id="settingsSave" class="primary">Save</button></div>
+  </form>
+</dialog>
+
+<script>
+/*
+ * Review dashboard. Plain JS, no build step; everything goes through the HTTP API (docs/API.md).
+ *
+ * Two screens, chosen by the URL hash:
+ *   #            home: paste a meeting link (looked up live), options, and the list of packages
+ *   #job=<id>    one package: a step checklist while it's being made, then the review screen
+ *                (sidebar by content type, cards with Approve / Reject / Edit, source player)
+ *
+ * The review screen is built once per job; after an action only the changed card, the sidebar
+ * counts and the download bar are redrawn, so videos that are playing keep playing.
+ *
+ * Source linking: every asset cites transcript segment ids. tsChip() turns an id into a
+ * timestamp button; clicking it plays the source recording there and highlights the line.
+ *
+ * Auth: if the server sets CF_API_TOKEN, the token is asked for once and kept in localStorage.
+ * Media elements can't send headers, so media URLs carry it as ?access_token= (withToken()).
+ *
+ * The UI only shows actions the backend allows (asset.allowed_decisions), but the backend
+ * enforces every rule itself; nothing here is a security boundary.
+ */
+const P = "/api/v1/content-factory";
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let token = null; try { token = localStorage.getItem("cfToken"); } catch {}
+let health = {};
+let state = { job: null, assets: [], transcript: null, segIndex: {}, filter: "todo", poll: null, built: false };
+
+// Plain-language names for everything the API calls by its internal name.
+const TYPES = {
+  clip: { many: "Clips", one: "Clip", hint: "Short videos of the best moments, with captions." },
+  blog: { many: "Blog post", one: "Blog post", hint: "An article written from the talk. Each paragraph links to where it was said." },
+  linkedin_post: { many: "LinkedIn posts", one: "LinkedIn post", hint: "Posts for your company page, each on a different angle." },
+  quote: { many: "Quotes", one: "Quote", hint: "Word-for-word quotes, checked against the recording." },
+  takeaway: { many: "Takeaways", one: "Takeaway", hint: "Short AI-written lines that sum up an idea. Not quotes; never attributed to a speaker." },
+  visual_brief: { many: "Design briefs", one: "Design brief", hint: "Briefs a designer can turn into graphics in Canva." },
+  chapters: { many: "Chapters", one: "Chapters", hint: "Chapter titles and times, e.g. for the YouTube description." },
+  content_brief: { many: "Summary", one: "Summary", hint: "The main message and takeaways that all the content follows." },
+};
+const ORDER = ["clip", "blog", "linkedin_post", "quote", "takeaway", "visual_brief", "chapters", "content_brief"];
+const STATUS = { PENDING_REVIEW: "Needs review", APPROVED: "Approved", REJECTED: "Rejected", CHANGES_REQUESTED: "Changes requested",
+  REVISED: "Edited", GENERATED: "Draft" };
+const STEPS = { ingest: "Getting the recording and transcript from MeetStream", chapters: "Splitting the talk into chapters",
+  content_brief: "Working out the main message", clip_selection: "Picking the best moments for clips", blog: "Writing the blog post",
+  social: "Writing LinkedIn posts", quotes: "Finding quotable lines", visual_briefs: "Writing design briefs",
+  render_clips: "Cutting and captioning the video clips", quality_validation: "Checking everything against the recording" };
+
+function toast(msg) { $$(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.append(t); setTimeout(() => t.remove(), 4500); }
+function clock(s) { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0"); }
+const when = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+const plural = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+const offline = () => health.llm_mode !== "openai";
+
+// fetch() wrapper: adds the token, JSON-encodes `opts.json`, and throws the API's `detail` message on errors.
+async function api(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers.Authorization = "Bearer " + token;
+  if (opts.json !== undefined) { headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(opts.json); }
+  const r = await fetch(path, { ...opts, headers });
+  if (!r.ok) { let d; try { d = (await r.json()).detail; } catch { d = r.statusText; } throw new Error(typeof d === "string" ? d : d.map?.(e => e.msg).join("; ") || JSON.stringify(d)); }
+  return r.json();
+}
+const withToken = url => token ? url + (url.includes("?") ? "&" : "?") + "access_token=" + encodeURIComponent(token) : url;
+
+// ================================================================ home
+
+function renderHome() {
+  clearTimeout(state.poll); state = { ...state, job: null, built: false };
+  const msOff = !health.meetstream_configured;
+  $("#app").innerHTML = `<div class="home">
+    <div class="hero">
+      <h1>Turn a meeting into content</h1>
+      <p>Paste a link to a recording, or drop the file in. You'll get clips, a blog post, LinkedIn posts and quotes to review. Nothing gets published.</p>
+      <div class="paste">
+        <input id="link" autocomplete="off" placeholder="A MeetStream recording link, a Zoom / Meet / Teams link, or any .mp4 link">
+        <button id="go" class="primary lg">Create content</button>
+      </div>
+      <div class="lookup" id="lookup"></div>
+      <div class="or">or</div>
+      <div class="drop" id="drop" tabindex="0"><b>Drop a recording here</b> or click to choose a file<div class="small">MP4, MOV, WebM, MKV, MP3, WAV or M4A · it's transcribed automatically</div>
+        <input type="file" id="file" hidden accept=".mp4,.mov,.webm,.mkv,.mp3,.wav,.m4a,video/*,audio/*"></div>
+      <div class="under">
+        ${msOff ? `<span class="muted">MeetStream isn't connected, so meeting links and bot ids won't work (files and recording links will). <button class="link" data-settings>Add a MeetStream key</button></span>`
+          : `<button class="link" id="browse">Pick from your recent MeetStream recordings</button>`}
+        <button class="link" id="optToggle">Options</button>
+      </div>
+      <div id="recs" class="box" hidden></div>
+      <div id="options" class="box" hidden>
+        <label for="title">Title <span class="muted">(optional)</span></label><input id="title" placeholder="e.g. Building Production AI Agents">
+        <div class="grid2">
+          <div><label for="audience">Written for</label><select id="audience"><option value="developers">Developers</option><option value="founders">Founders and leaders</option><option value="marketers">Marketers</option><option value="general">A general audience</option></select></div>
+          <div><label for="tone">Tone</label><select id="tone"><option value="technical">Technical</option><option value="conversational">Conversational</option><option value="educational">Educational</option><option value="thought_leadership">Thought leadership</option><option value="company_blog">Company blog</option></select></div>
+          <div><label for="clipCount">Number of clips</label><input id="clipCount" type="number" min="1" max="12" value="5"></div>
+          <div><label for="blogWords">Blog length (words)</label><input id="blogWords" type="number" min="300" max="3000" step="100" value="1000"></div>
+        </div>
+        <label class="check" style="margin-top:14px"><input id="portrait" type="checkbox" checked> Also make vertical (9:16) clips for Reels, Shorts and TikTok</label>
+        <label class="check"><input id="burn" type="checkbox" checked> Put captions on the video</label>
+      </div>
+    </div>
+    <div class="section-title"><h2>Your content</h2><span class="muted small" id="jobsNote"></span></div>
+    <div id="jobs" class="pkgs"></div>
+  </div>`;
+
+  let timer = null, seq = 0;
+  $("#link").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(lookup, 450); });
+  $("#link").addEventListener("keydown", e => { if (e.key === "Enter") create(); });
+  $("#go").onclick = create;
+  $("#optToggle").onclick = () => { $("#options").hidden = !$("#options").hidden; };
+  $("#browse")?.addEventListener("click", browse);
+  const drop = $("#drop"), file = $("#file");
+  drop.onclick = () => file.click();
+  drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") file.click(); };
+  file.onchange = () => file.files[0] && upload(file.files[0]);
+  ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) upload(f); });
+  // Files dropped anywhere else on the page would make the browser navigate away to play them.
+  ["dragover", "drop"].forEach(ev => window.addEventListener(ev, e => e.preventDefault()));
+
+  // Show which recording the pasted link points at, before anything is created.
+  async function lookup() {
+    const link = $("#link").value.trim(), box = $("#lookup"), mine = ++seq;
+    if (!link) { box.innerHTML = ""; return; }
+    box.innerHTML = `<span class="muted">Looking up the recording…</span>`;
+    try {
+      const r = await api("/api/v1/meetstream/resolve?link=" + encodeURIComponent(link));
+      if (mine !== seq) return;
+      const b = r.bot || {}, more = (r.other_matches || []).length;
+      if (r.resolved_from === "recording_url") {
+        const mins = r.expires_at ? Math.floor((new Date(r.expires_at) - Date.now()) / 60000) : null;
+        box.innerHTML = `<span class="found">✓ The recording link works${r.size ? ` (${(r.size / 1e6).toFixed(1)} MB)` : ""}</span>
+          <span class="muted">· ${r.transcript === "meetstream" ? "MeetStream's transcript will be used" : "it'll be transcribed automatically"}${mins !== null ? ` · link expires in ${mins} min, so start soon` : ""}</span>`;
+        return;
+      }
+      box.innerHTML = r.resolved_from === "meeting_link"
+        ? `<span class="found">✓ Found the recording: ${esc(b.platform || "Meeting")} · ${esc(when(b.created_at))}${more ? ` <span class="muted">(the latest of ${more + 1} recordings of this meeting)</span>` : ""}</span>`
+        : `<span class="found">✓ Found the recording: ${esc(b.platform || "MeetStream")}${b.created_at ? " · " + esc(when(b.created_at)) : ""}</span>`;
+    } catch (e) { if (mine === seq) box.innerHTML = `<div class="problem">${esc(e.message)}</div>`; }
+  }
+
+  async function browse() {
+    const box = $("#recs");
+    if (!box.hidden) { box.hidden = true; return; }
+    box.hidden = false; box.innerHTML = `<span class="muted">Loading your MeetStream recordings…</span>`;
+    try {
+      const { recordings } = await api("/api/v1/meetstream/recordings");
+      box.innerHTML = recordings.length ? `<div class="recs">${recordings.map(r => `<button class="rec" data-id="${esc(r.bot_id)}">
+          <span class="plat">${esc(r.platform || "")}</span><span class="when">${esc(when(r.created_at) || r.bot_id)}<div class="small muted">${esc(r.name || "")}</div></span>
+          <span class="small muted">${esc(r.status || "")}</span></button>`).join("")}</div>`
+        : `<span class="muted">No recordings on this MeetStream account yet.</span>`;
+      $$(".rec", box).forEach(b => b.onclick = () => { $("#link").value = b.dataset.id; box.hidden = true; lookup(); $("#link").focus(); });
+    } catch (e) { box.innerHTML = `<div class="problem">${esc(e.message)}</div>`; }
+  }
+
+  const configuration = () => ({ audience: $("#audience").value, tone: $("#tone").value, clip_count: +$("#clipCount").value,
+    blog_word_count: +$("#blogWords").value, burn_captions: $("#burn").checked,
+    clip_formats: $("#portrait").checked ? ["landscape", "portrait"] : ["landscape"] });
+
+  // Send a dropped file with a progress bar (fetch() can't report upload progress).
+  function upload(f) {
+    const drop = $("#drop");
+    drop.innerHTML = `<b>Uploading ${esc(f.name)}…</b><div class="bar"><div style="width:0%"></div></div>`;
+    const fd = new FormData();
+    fd.append("recording", f); fd.append("title", $("#title").value.trim()); fd.append("configuration", JSON.stringify(configuration()));
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", P + "/uploads");
+    if (token) xhr.setRequestHeader("Authorization", "Bearer " + token);
+    xhr.upload.onprogress = e => { if (e.lengthComputable) $(".bar > div", drop).style.width = (100 * e.loaded / e.total) + "%"; };
+    xhr.onload = () => {
+      let body = {}; try { body = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status < 300) { location.hash = "job=" + body.job_id; return; }
+      toast(typeof body.detail === "string" ? body.detail : "Upload failed (HTTP " + xhr.status + ")"); renderHome();
+    };
+    xhr.onerror = () => { toast("Upload failed: the server couldn't be reached."); renderHome(); };
+    xhr.send(fd);
+  }
+
+  async function create() {
+    const link = $("#link").value.trim();
+    if (!link) { toast("Paste a link first, or drop a recording in."); $("#link").focus(); return; }
+    const btn = $("#go"); btn.disabled = true; btn.textContent = "Starting…";
+    try {
+      const job = await api(P + "/jobs", { method: "POST", json: { source: { type: "meetstream_recording", link, title: $("#title").value.trim() || null }, configuration: configuration() } });
+      location.hash = "job=" + job.job_id;
+    } catch (e) { $("#lookup").innerHTML = `<div class="problem">${esc(e.message)}</div>`; btn.disabled = false; btn.textContent = "Create content"; }
+  }
+
+  loadJobs();
+}
+
+async function loadJobs() {
+  if (!$("#jobs")) return;
+  let jobs;
+  try { jobs = await api(P + "/jobs"); } catch (e) { $("#jobs").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (!$("#jobs")) return;
+  $("#jobs").innerHTML = jobs.map(j => {
+    let line, pct = j.progress, cls = "";
+    if (j.status === "queued") line = "Waiting to start…";
+    else if (j.status === "processing") line = `Being made… ${j.progress}%`;
+    else if (j.status === "failed") { line = `<span style="color:var(--err)">Something went wrong. Open to retry.</span>`; pct = 0; }
+    else { line = j.to_review ? `<b>${j.to_review}</b> to review · ${j.approved} approved` : `✓ All reviewed · ${j.approved} approved`;
+      pct = j.assets ? Math.round(100 * (j.assets - j.to_review) / j.assets) : 100; cls = "ok"; }
+    return `<a class="pkg" href="#job=${esc(j.job_id)}"><b>${esc(j.title || "Untitled")}</b><span class="small muted">${esc(when(j.created_at))}</span>
+      <div class="state">${line}</div><div class="bar ${cls}"><div style="width:${pct}%"></div></div></a>`;
+  }).join("") || `<div class="empty" style="grid-column:1/-1">Nothing yet. Paste a link or drop a recording above to make your first content package.</div>`;
+  if (jobs.some(j => j.status === "queued" || j.status === "processing")) state.poll = setTimeout(loadJobs, 2500);
+}
+
+// ================================================================ job
+
+async function openJob(id) {
+  clearTimeout(state.poll);
+  state = { job: null, assets: [], transcript: null, segIndex: {}, filter: "todo", poll: null, built: false };
+  $("#app").innerHTML = `<div class="page"><a class="back" href="#">← All content</a><div class="making box muted">Loading…</div></div>`;
+  try { await refreshJob(id); } catch (e) { $("#app").innerHTML = `<div class="page"><a class="back" href="#">← All content</a><div class="error">${esc(e.message)}</div></div>`; }
+}
+
+async function refreshJob(id) {
+  const job = await api(`${P}/jobs/${id}`);
+  if (location.hash !== "#job=" + id) return; // navigated away meanwhile
+  state.job = job;
+  if (job.status === "awaiting_review") {
+    state.assets = await api(`${P}/jobs/${id}/assets`);
+    if (!state.transcript) {
+      state.transcript = await api(`${P}/jobs/${id}/transcript`);
+      state.segIndex = Object.fromEntries(state.transcript.segments.map((s, i) => [s.id, i]));
+    }
+    if (!state.built) buildReview(); else updateReview();
+  } else {
+    renderMaking();
+    if (job.status === "queued" || job.status === "processing") state.poll = setTimeout(() => refreshJob(id), 1500);
+  }
+}
+
+const jobTitle = j => j.webinar ? j.webinar.title : (j.source.title || "New content package");
+const jobSub = j => [j.webinar && j.webinar.duration_seconds ? clock(j.webinar.duration_seconds) + " recording" : "", "Made " + when(j.created_at)].filter(Boolean).join(" · ");
+
+// While the package is being made (or if making it failed): a checklist of steps.
+function renderMaking() {
+  const j = state.job, failed = j.status === "failed";
+  const order = Object.keys(STEPS);
+  const ingestLabel = j.source.type === "meetstream_recording" ? STEPS.ingest
+    : j.source.type === "upload" ? "Transcribing the recording (about 3 minutes per hour of video)"
+    : "Downloading the recording and getting a transcript";
+  $("#app").innerHTML = `<div class="page"><a class="back" href="#">← All content</a>
+    <div class="making"><div class="jobhead"><h1>${esc(jobTitle(j))}</h1><div class="muted small">${esc(jobSub(j))}</div></div>
+      <div class="box">
+        <b>${failed ? "This one didn't finish" : j.status === "queued" ? "Waiting to start…" : "Making your content…"}</b>
+        <span class="muted small">${failed ? "" : `${j.progress}% · this page updates by itself`}</span>
+        <div class="bar"><div style="width:${failed ? 0 : j.progress}%"></div></div>
+        <ul class="steps">${order.map(s => {
+          const cls = j.completed.includes(s) ? "done" : failed && s === j.current_stage ? "failed" : s === j.current_stage ? "now" : "";
+          return `<li class="${cls}"><span class="dot">${cls === "done" ? "✓" : cls === "failed" ? "!" : ""}</span>${esc(s === "ingest" ? ingestLabel : STEPS[s])}</li>`;
+        }).join("")}</ul>
+        ${failed ? `<div class="error">${esc(j.error_message || "Unknown error")}</div>
+          <div style="margin-top:12px; display:flex; gap:10px; align-items:center"><button class="primary" id="retry">Try again</button>
+          <span class="muted small">Finished steps aren't redone.</span></div>` : ""}
+      </div></div></div>`;
+  $("#retry")?.addEventListener("click", async () => {
+    try { await api(`${P}/jobs/${j.job_id}/retry`, { method: "POST" }); refreshJob(j.job_id); } catch (e) { toast(e.message); }
+  });
+}
+
+// ---------------------------------------------------------------- review screen
+
+function buildReview() {
+  const j = state.job;
+  state.built = true;
+  const warnings = j.warnings.filter(w => w.level !== "info");
+  $("#app").innerHTML = `<div class="page"><a class="back" href="#">← All content</a>
+    <div class="jobhead"><h1>${esc(jobTitle(j))}</h1><div class="muted small">${esc(jobSub(j))}</div></div>
+    <div class="finish" id="finish"></div>
+    ${offline() ? `<div class="notice"><b>AI writing is off</b>, so these drafts are the speakers' own sentences rearranged by simple rules. <button class="link" data-settings>Add your OpenAI key</button>, then make the package again for properly written posts, blog and clip picks.</div>` : ""}
+    ${warnings.map(w => `<div class="heads-up"><b>Check before publishing:</b> ${esc(w.message)} ${(w.segment_ids || []).map(tsChip).join("")}</div>`).join("")}
+    <div class="review">
+      <nav class="nav" id="nav"></nav>
+      <section id="list"></section>
+      <aside class="source">
+        <h2>Original recording</h2>
+        ${j.webinar.has_video ? `<video id="src" controls preload="metadata" src="${withToken(`${P}/jobs/${j.job_id}/recording`)}"></video>`
+          : `<audio id="src" controls preload="metadata" src="${withToken(`${P}/jobs/${j.job_id}/recording`)}"></audio>`}
+        <div class="small muted" style="margin-top:6px">Click a line to play from there. The ▶ times on each item jump here too.</div>
+        <div id="transcript">${state.transcript.segments.map(s => `<p data-seg="${s.id}" data-t="${s.start}"><span class="t">${clock(s.start)}</span>${s.speaker === "Speaker" ? "" : `<b>${esc(s.speaker)}:</b> `}${esc(s.text)}</p>`).join("")}</div>
+      </aside>
+    </div></div>`;
+  $$("#transcript p").forEach(p => p.onclick = () => seek(+p.dataset.t));
+  const media = $("#src");
+  media.addEventListener("timeupdate", () => {
+    const t = media.currentTime; let cur = null;
+    for (const s of state.transcript.segments) { if (s.start <= t && t < s.end + 0.5) cur = s.id; }
+    $$("#transcript p.now").forEach(p => p.classList.remove("now"));
+    if (cur) $(`#transcript p[data-seg="${cur}"]`)?.classList.add("now");
+  });
+  bindChips(document);
+  updateReview();
+}
+
+function updateReview() { renderFinish(); renderNav(); renderList(); }
+
+// The bar at the top: how far review has got, and the one button that finishes the job.
+function renderFinish() {
+  const j = state.job, a = state.assets, n = s => a.filter(x => x.status === s).length;
+  const approved = n("APPROVED"), rejected = n("REJECTED"), left = a.length - approved - rejected;
+  const last = j.exports.find(e => e.export_status === "completed");
+  $("#finish").innerHTML = `<div class="tally">
+      <div><b>${approved}</b> approved · <b>${rejected}</b> rejected · <b>${left}</b> still to decide</div>
+      <div class="bar ok"><div style="width:${a.length ? 100 * (approved + rejected) / a.length : 0}%"></div></div>
+    </div>
+    <div><button class="primary" id="download" ${approved ? "" : "disabled"}>Download ${approved ? plural(approved, "approved item") : "approved content"}</button>
+      <div class="hint">${approved ? (last ? `<a href="${withToken(`${P}/exports/${last.id}/download`)}">Last download</a> · ` : "") + "A ZIP of only what you approved" : "Approve something first"}</div></div>`;
+  $("#download").onclick = download;
+}
+
+async function download() {
+  const j = state.job;
+  if (!j.consent_confirmed) {
+    const dlg = $("#consent"); $("#consentOk").checked = false; $("#consentGo").disabled = true;
+    $("#consentOk").onchange = () => { $("#consentGo").disabled = !$("#consentOk").checked; };
+    dlg.showModal();
+    const ok = await new Promise(r => dlg.addEventListener("close", () => r(dlg.returnValue === "ok"), { once: true }));
+    if (!ok) return;
+    try { state.job = await api(`${P}/jobs/${j.job_id}/consent`, { method: "POST", json: { reviewer: "reviewer", note: $("#consentNote").value.trim() || "Confirmed in the dashboard" } }); }
+    catch (e) { toast(e.message); return; }
+  }
+  const btn = $("#download"); btn.disabled = true; btn.textContent = "Packaging…";
+  try {
+    const e = await api(`${P}/jobs/${j.job_id}/export`, { method: "POST" });
+    location.href = withToken(e.download_url);
+    toast("Downloading your ZIP.");
+    state.job = await api(`${P}/jobs/${j.job_id}`);
+  } catch (e) { toast(e.message); }
+  renderFinish();
+}
+
+function renderNav() {
+  const a = state.assets, todo = a.filter(x => x.status === "PENDING_REVIEW").length;
+  const types = ORDER.filter(t => a.some(x => x.asset_type === t));
+  const item = (f, label, n, done) => `<button data-f="${f}" class="${state.filter === f ? "on" : ""}"><span>${esc(label)}</span><span class="n ${done ? "done" : ""}">${n}</span></button>`;
+  $("#nav").innerHTML = item("todo", "To review", todo, !todo) + item("all", "Everything", a.length) + "<hr>" +
+    types.map(t => { const of = a.filter(x => x.asset_type === t), ok = of.filter(x => x.status === "APPROVED").length;
+      const decided = of.every(x => x.status === "APPROVED" || x.status === "REJECTED");
+      return item(t, TYPES[t].many, decided ? `✓ ${ok}/${of.length}` : `${ok}/${of.length}`, decided); }).join("");
+  $$("#nav button").forEach(b => b.onclick = () => { state.filter = b.dataset.f; renderNav(); renderList(); window.scrollTo({ top: $("#finish").offsetTop - 70, behavior: "smooth" }); });
+}
+
+const visible = () => state.assets
+  .filter(a => state.filter === "all" || (state.filter === "todo" ? a.status === "PENDING_REVIEW" : a.asset_type === state.filter))
+  .sort((a, b) => ORDER.indexOf(a.asset_type) - ORDER.indexOf(b.asset_type) || a.position - b.position);
+
+function renderList() {
+  const shown = visible(), f = state.filter;
+  const head = f === "todo" ? ["To review", "Approve what you'd publish, reject the rest. Edit anything that's nearly right."]
+    : f === "all" ? ["Everything", "Every item in this package."] : [TYPES[f].many, TYPES[f].hint];
+  const bulk = shown.filter(a => a.status === "PENDING_REVIEW" && !a.qa.some(n => n.level === "error"));
+  $("#list").innerHTML = `<div class="listhead"><div><h2>${esc(head[0])}</h2><div class="muted small">${esc(head[1])}</div></div>
+      ${TYPES[f] && bulk.length > 1 ? `<button id="bulk">Approve all ${bulk.length}</button>` : ""}</div>
+    ${shown.map(card).join("") || `<div class="empty">${f === "todo" ? "🎉 Nothing left to review. Download your approved content from the bar above." : "Nothing here."}</div>`}`;
+  $$("#list .card").forEach(bindCard);
+  $("#bulk")?.addEventListener("click", async () => {
+    const btn = $("#bulk"); btn.disabled = true;
+    for (const a of bulk) {
+      btn.textContent = `Approving… ${bulk.indexOf(a) + 1}/${bulk.length}`;
+      try { swap(await api(`${P}/assets/${a.id}/approve`, { method: "POST", json: { reviewer: "reviewer" } }), false); } catch (e) { toast(e.message); break; }
+    }
+    updateReview();
+  });
+}
+
+// ---------------------------------------------------------------- cards
+
+// A clickable timestamp for a transcript segment id; the tooltip shows what was said there.
+function tsChip(segId) {
+  const i = state.segIndex[segId]; if (i === undefined) return "";
+  const s = state.transcript.segments[i];
+  return `<button class="ts" data-seg="${esc(segId)}" title="${esc(s.speaker)}: ${esc(s.text.slice(0, 140))}">${clock(s.start)}</button>`;
+}
+const chips = ids => [...new Set(ids || [])].map(tsChip).join("");
+const timeChip = t => `<button class="ts" data-t="${t}">${clock(t)}</button>`;
+const from = ids => (ids || []).length ? `<div class="from">From the recording: ${chips(ids)}</div>` : "";
+
+function card(a) {
+  const t = TYPES[a.asset_type] || { one: a.asset_type }, d = a.allowed_decisions, can = x => d.includes(x);
+  const sameType = state.assets.filter(x => x.asset_type === a.asset_type);
+  const kind = sameType.length > 1 ? `${t.one} ${sameType.indexOf(a) + 1} of ${sameType.length}` : t.one;
+  const notes = a.qa.filter(n => n.code !== "word_count");
+  return `<article class="card ${a.status}" data-id="${a.id}">
+    <div class="cardtop"><div style="flex:1"><div class="kind">${esc(kind)}</div><h3>${esc(a.title)}</h3></div>
+      <span class="pill ${a.status}">${esc(STATUS[a.status] || a.status)}${a.version > 1 ? " · edited" : ""}</span></div>
+    ${notes.map(n => `<div class="note ${n.level}">${n.level === "error" ? "<b>Problem:</b> " : ""}${esc(n.message)}</div>`).join("")}
+    <div class="body">${body(a)}</div>
+    <div class="actions">
+      ${can("approve") ? `<button class="approve" data-act="approve">✓ Approve</button>` : ""}
+      ${can("edit") ? `<button data-act="edit">Edit</button>` : ""}
+      ${can("regenerate") && !offline() ? `<button data-act="regenerate">Rewrite with AI</button>` : ""}
+      ${can("request_changes") ? `<button data-act="request-changes" title="Leave a note for whoever edits it">Ask for changes</button>` : ""}
+      ${can("reject") ? `<button class="reject" data-act="reject">Reject</button>` : ""}
+      ${can("reopen") ? `<button data-act="reopen">Undo reject</button>` : ""}
+    </div>
+    <div class="inline"></div></article>`;
+}
+
+// Type-specific rendering of an asset's content. Citations become timestamp buttons.
+function body(a) {
+  const c = a.content, f = a.file_urls;
+  switch (a.asset_type) {
+    case "clip": {
+      const fmts = ["landscape", "portrait", "square"].filter(k => f[k]);
+      const names = { landscape: "Landscape", portrait: "Vertical", square: "Square" };
+      const media = fmts.length ? `${fmts.length > 1 ? `<div class="seg">${fmts.map((k, i) => `<button data-fmt="${k}" class="${i ? "" : "on"}">${names[k]}</button>`).join("")}</div>` : ""}
+          <div class="clipmedia ${fmts[0]}"><video controls preload="metadata" src="${withToken(f[fmts[0]])}"></video></div>`
+        : f.audio ? `<div class="clipmedia"><audio controls src="${withToken(f.audio)}"></audio></div>` : `<div class="note warning">This clip couldn't be rendered.</div>`;
+      return `${media}<div class="facts"><span>${timeChip(c.start)} to ${timeChip(c.end)} in the recording</span><span>${c.duration.toFixed(0)} seconds</span>
+          <span title="How well it works on its own: hook, clarity, standalone sense, insight">Strength ${c.score}/100</span>
+          ${["srt", "vtt"].filter(k => f[k]).map(k => `<a href="${withToken(f[k])}" download>Captions (.${k})</a>`).join("")}</div>
+        <p class="small" style="margin-top:8px"><b>Why this moment:</b> ${esc(c.reason)}</p>
+        <details><summary>What's said in it</summary><p class="small">${esc(c.transcript_text)}</p></details>`;
+    }
+    case "blog": {
+      const ps = list => list.map(x => `<p>${esc(x.text)} ${chips(x.segment_ids)}</p>`).join("");
+      return `<p class="muted small"><b>Search description:</b> ${esc(c.meta_description)}</p>${ps(c.introduction)}
+        ${c.sections.map(s => `<h4>${esc(s.heading)}</h4>${ps(s.paragraphs)}`).join("")}<h4>Conclusion</h4>${ps(c.conclusion)}
+        <details><summary>Takeaways, keywords and link ideas</summary><ul>${c.key_takeaways.map(k => `<li>${esc(k)}</li>`).join("")}</ul>
+          <p class="small muted">Keywords: ${esc(c.keywords.join(", "))}</p>
+          ${c.internal_link_suggestions.length ? `<p class="small muted">Worth linking to: ${esc(c.internal_link_suggestions.join(", "))}</p>` : ""}</details>`;
+    }
+    case "linkedin_post":
+      return `<div class="post">${esc(c.text)}</div><p class="tags">${esc(c.hashtags.join(" "))}</p>${from(c.segment_ids)}`;
+    case "quote":
+      return `<div class="quote">“${esc(c.quote)}”</div><p class="small">— ${esc(c.speaker && c.speaker !== "Speaker" ? c.speaker : "Speaker (name not in the transcript)")}</p>${from(c.segment_ids)}`;
+    case "takeaway":
+      return `<div class="ai-label">${esc(c.label)}</div><div class="quote">${esc(c.text)}</div>${from(c.segment_ids)}`;
+    case "visual_brief":
+      return `<p class="small muted">${esc({ quote_card: "Quote card", carousel: "LinkedIn carousel", thumbnail: "YouTube thumbnail" }[c.kind] || c.kind)} · ${esc(c.aspect_ratio)}</p>
+        ${c.quote ? `<div class="quote">“${esc(c.quote)}”</div><p class="small">— ${esc(c.speaker || "")}</p>` : ""}
+        <p><b>Layout:</b> ${esc(c.layout)}</p><p><b>Look and feel:</b> ${esc(c.visual_direction)}</p>
+        ${c.slides.length ? `<ol>${c.slides.map(s => `<li><b>${esc(s.headline)}</b> ${esc(s.body)} <span class="muted small">(${esc(s.visual)})</span></li>`).join("")}</ol>` : ""}
+        ${from(c.segment_ids)}`;
+    case "chapters":
+      return `<ol>${c.chapters.map(ch => `<li>${timeChip(ch.start)} <b>${esc(ch.title)}</b><div class="small muted">${esc(ch.summary)}</div></li>`).join("")}</ol>
+        <details><summary>Copy for a YouTube description</summary><pre style="white-space:pre-wrap">${esc(c.youtube_chapters)}</pre></details>`;
+    case "content_brief":
+      return `<p><b>${esc(c.primary_message)}</b></p><p class="small muted">For ${esc(c.target_audience)} · ${esc(c.tone)} · Call to action: ${esc(c.call_to_action)}</p>
+        <ul>${c.key_takeaways.map(t => `<li>${esc(t.text)} ${chips(t.segment_ids)}</li>`).join("")}</ul>`;
+  }
+  return `<pre>${esc(JSON.stringify(c, null, 2))}</pre>`;
+}
+
+function bindChips(root) {
+  $$(".ts", root).forEach(b => b.onclick = e => { e.stopPropagation(); b.dataset.seg ? seekToSegment(b.dataset.seg) : seek(+b.dataset.t); });
+}
+
+function bindCard(el) {
+  const a = state.assets.find(x => x.id === el.dataset.id);
+  bindChips(el);
+  $$("[data-fmt]", el).forEach(b => b.onclick = () => {
+    $$("[data-fmt]", el).forEach(x => x.classList.toggle("on", x === b));
+    const box = $(".clipmedia", el); box.className = "clipmedia " + b.dataset.fmt;
+    $("video", box).src = withToken(a.file_urls[b.dataset.fmt]);
+  });
+  $$("[data-act]", el).forEach(b => b.onclick = () => act(a, el, b.dataset.act));
+}
+
+// Put an updated asset back: redraw just its card (or drop it from "To review") and the counts.
+function swap(updated, redraw = true) {
+  state.assets = state.assets.map(x => x.id === updated.id ? updated : x);
+  if (!redraw) return;
+  const el = $(`#list .card[data-id="${updated.id}"]`);
+  if (el) {
+    if (!visible().some(x => x.id === updated.id)) { el.style.opacity = 0; setTimeout(() => { el.remove(); if (!$("#list .card")) renderList(); }, 250); }
+    else { el.outerHTML = card(updated); bindCard($(`#list .card[data-id="${updated.id}"]`)); }
+  }
+  renderFinish(); renderNav();
+}
+
+// Ask for some text inside the card (instead of a browser prompt). Resolves to the text, or null.
+function ask(el, { label, placeholder = "", submit, required = true, value = "" }) {
+  const box = $(".inline", el);
+  box.innerHTML = `<label>${esc(label)}</label><textarea placeholder="${esc(placeholder)}">${esc(value)}</textarea>
+    <div class="row"><button class="primary" data-ok>${esc(submit)}</button><button data-no>Cancel</button></div>`;
+  const ta = $("textarea", box); ta.focus();
+  return new Promise(resolve => {
+    $("[data-no]", box).onclick = () => { box.innerHTML = ""; resolve(null); };
+    $("[data-ok]", box).onclick = () => { const v = ta.value.trim(); if (required && !v) { ta.focus(); return; } box.innerHTML = ""; resolve(v); };
+  });
+}
+
+async function act(a, el, action) {
+  const url = `${P}/assets/${a.id}`;
+  if (action === "edit") return edit(a, el);
+  let feedback = null;
+  if (action === "request-changes") {
+    feedback = await ask(el, { label: "What should change?", placeholder: "e.g. Lead with the failure story and cut it to 150 words", submit: "Ask for changes" });
+    if (feedback === null) return;
+  }
+  if (action === "regenerate") {
+    feedback = await ask(el, { label: "What should the AI do differently?", placeholder: "e.g. Make it more practical, with a short checklist", submit: "Rewrite" });
+    if (feedback === null) return;
+  }
+  if (action === "approve" && a.qa.some(n => n.level === "error")) {
+    feedback = await ask(el, { label: "This item has a problem flagged above. Why is it OK to approve anyway?", submit: "Approve anyway" });
+    if (feedback === null) return;
+  }
+  $$("button", el).forEach(b => b.disabled = true);
+  if (action === "regenerate") $(".inline", el).innerHTML = `<span class="muted small">Rewriting… this can take a minute.</span>`;
+  try { swap(await api(`${url}/${action}`, { method: "POST", json: { reviewer: "reviewer", feedback } })); }
+  catch (e) { toast(e.message); $$("button", el).forEach(b => b.disabled = false); $(".inline", el).innerHTML = ""; }
+}
+
+// ---------------------------------------------------------------- editing
+// Clips edit their times (and are re-cut). Everything else gets a form built from its content:
+// text fields become inputs, lists of text become one-per-line boxes; ids and times are kept as they are.
+
+const FIXED = new Set(["segment_ids", "kind", "aspect_ratio", "index", "first_segment_id", "last_segment_id", "start_segment_id", "end_segment_id",
+  "start", "end", "duration", "confidence", "score", "score_breakdown", "label", "platforms", "transcript_text", "reason", "angle"]);
+const LONG = new Set(["text", "body", "quote", "visual_direction", "layout", "summary", "excerpt", "primary_message", "youtube_chapters", "meta_description"]);
+const NAMES = { meta_description: "Search description", internal_link_suggestions: "Worth linking to", visual_direction: "Look and feel",
+  primary_message: "Main message", call_to_action: "Call to action", youtube_chapters: "YouTube description chapters" };
+const human = k => NAMES[k] || (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
+const single = l => l.replace(/ies$/, "y").replace(/s$/, "");
+
+function fields(v, path, label) {
+  const p = esc(JSON.stringify(path));
+  if (typeof v === "string") {
+    const long = LONG.has(path[path.length - 1]) || v.length > 90;
+    return `<label>${esc(label)}</label>${long ? `<textarea data-path="${p}" rows="${Math.min(12, 2 + Math.ceil(v.length / 90))}">${esc(v)}</textarea>` : `<input data-path="${p}" value="${esc(v)}">`}`;
+  }
+  if (Array.isArray(v)) {
+    if (v.every(x => typeof x === "string")) return `<label>${esc(label)} <span class="muted">(one per line)</span></label><textarea data-path="${p}" data-list="1" rows="${Math.max(3, v.length + 1)}">${esc(v.join("\n"))}</textarea>`;
+    return v.map((x, i) => {
+      const keys = x && typeof x === "object" ? Object.keys(x).filter(k => !FIXED.has(k)) : [];
+      if (keys.length === 1 && typeof x[keys[0]] === "string") return fields(x[keys[0]], [...path, i, keys[0]], `${single(label)} ${i + 1}`);
+      return `<fieldset><legend>${esc(single(label))} ${i + 1}</legend>${fields(x, [...path, i], label)}</fieldset>`;
+    }).join("");
+  }
+  if (v && typeof v === "object") return Object.entries(v).filter(([k, x]) => !FIXED.has(k) && x !== null).map(([k, x]) => fields(x, [...path, k], human(k))).join("");
+  return "";
+}
+
+function edit(a, el) {
+  const box = $(".inline", el);
+  if (box.innerHTML) { box.innerHTML = ""; return; }
+  const c = a.content, isClip = a.asset_type === "clip";
+  // Content with its own title (blog, design briefs) edits that one field, which also renames the item.
+  const ownTitle = typeof c.title === "string";
+  box.innerHTML = (ownTitle ? "" : `<label>Title</label><input data-title value="${esc(a.title)}">`) + (isClip
+    ? `<div class="grid2"><div><label>Starts at (seconds)</label><input type="number" step="0.1" data-start value="${c.start}"></div>
+         <div><label>Ends at (seconds)</label><input type="number" step="0.1" data-end value="${c.end}"></div></div>
+       <div class="row"><button data-now="start">Start at the player's position</button><button data-now="end">End at the player's position</button></div>
+       <p class="small muted">Saving re-cuts the clip and its captions.</p>`
+    : (a.asset_type === "quote" ? `<p class="small muted">A quote has to stay word for word what was said.</p>` : "") + fields(c, [], ""))
+    + `<div class="row"><button class="primary" data-save>Save</button><button data-cancel>Cancel</button></div>`;
+  $$("[data-now]", box).forEach(b => b.onclick = () => { const m = $("#src"); if (m) $(`[data-${b.dataset.now}]`, box).value = m.currentTime.toFixed(1); });
+  $("[data-cancel]", box).onclick = () => box.innerHTML = "";
+  $("[data-save]", box).onclick = async () => {
+    const btn = $("[data-save]", box); btn.disabled = true; btn.textContent = isClip ? "Re-cutting the clip…" : "Saving…";
+    let content;
+    if (isClip) content = { start: +$("[data-start]", box).value, end: +$("[data-end]", box).value };
+    else {
+      content = structuredClone(c);
+      $$("[data-path]", box).forEach(inp => {
+        const path = JSON.parse(inp.dataset.path), val = inp.dataset.list ? inp.value.split("\n").map(s => s.trim()).filter(Boolean) : inp.value;
+        let o = content; path.slice(0, -1).forEach(k => o = o[k]); o[path[path.length - 1]] = val;
+      });
+    }
+    const title = ownTitle ? content.title : $("[data-title]", box).value;
+    try { swap(await api(`${P}/assets/${a.id}`, { method: "PATCH", json: { reviewer: "reviewer", title, content } })); toast("Saved. It's back in the review queue."); }
+    catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Save"; }
+  };
+}
+
+// ---------------------------------------------------------------- source player
+
+function seek(t) {
+  const m = $("#src"); if (!m) return;
+  m.currentTime = t; m.play().catch(() => {});
+  if (window.innerWidth <= 1200) $(".source").scrollIntoView({ block: "start", behavior: "smooth" });
+}
+function seekToSegment(id) {
+  const i = state.segIndex[id]; if (i === undefined) return;
+  $$("#transcript p.hl").forEach(p => p.classList.remove("hl"));
+  const p = $(`#transcript p[data-seg="${id}"]`); p.classList.add("hl");
+  $("#transcript").scrollTo({ top: p.offsetTop - $("#transcript").offsetTop - 80, behavior: "smooth" });
+  seek(state.transcript.segments[i].start);
+}
+
+// ---------------------------------------------------------------- boot
+async function boot() {
+  health = await (await fetch("/api/v1/health")).json();
+  if (health.auth_required && !token) { token = prompt("This Content Factory needs an access token:"); try { localStorage.setItem("cfToken", token); } catch {} }
+  renderMode();
+  $("#mode").onclick = $("#openSettings").onclick = openSettings;
+  // Any element with data-settings (notices, hints) opens the panel too.
+  document.addEventListener("click", e => { if (e.target.closest("[data-settings]")) openSettings(); });
+  route();
+}
+
+function renderMode() {
+  const mode = $("#mode");
+  mode.classList.toggle("off", offline());
+  mode.textContent = offline() ? "AI writing off · add key" : "AI: " + health.model;
+  mode.title = offline() ? "No OpenAI key yet, so drafts are assembled from the speakers' own sentences. Click to add one."
+    : "OpenAI picks the clips and writes the drafts. Click to change the key or model.";
+}
+
+// ---------------------------------------------------------------- settings
+async function openSettings() {
+  const dlg = $("#settings"), msg = $("#settingsMsg");
+  msg.className = "formmsg"; msg.textContent = "";
+  let cur;
+  try { cur = await api("/api/v1/settings"); } catch (e) { toast(e.message); return; }
+  const state = (k, el) => { const v = cur[k]; el.className = "keystate " + (v.set ? "ok" : "none");
+    el.innerHTML = v.set ? `✓ ${esc(v.hint)} (${v.source === "saved" ? "saved here" : "from the environment"})${v.source === "saved" ? ` · <button type="button" class="link" data-remove="${k}">remove</button>` : ""}` : "not set"; };
+  state("openai_api_key", $("#oaState")); state("meetstream_api_key", $("#msState"));
+  $("#oaKey").value = ""; $("#msKey").value = ""; $("#oaModel").value = cur.openai_model;
+  $("#oaKey").placeholder = cur.openai_api_key.set ? "Paste a new key to replace it" : "sk-…";
+  $("#msKey").placeholder = cur.meetstream_api_key.set ? "Paste a new key to replace it" : "ms_…";
+  $$("[data-remove]", dlg).forEach(b => b.onclick = () => save({ [b.dataset.remove]: "" }));
+  $("#settingsSave").onclick = () => {
+    const body = {};
+    if ($("#oaKey").value.trim()) body.openai_api_key = $("#oaKey").value.trim();
+    if ($("#oaModel").value.trim() && $("#oaModel").value.trim() !== cur.openai_model) body.openai_model = $("#oaModel").value.trim();
+    if ($("#msKey").value.trim()) body.meetstream_api_key = $("#msKey").value.trim();
+    if (!Object.keys(body).length) { dlg.close(); return; }
+    save(body);
+  };
+  async function save(body) {
+    const btn = $("#settingsSave"); btn.disabled = true; btn.textContent = "Checking…";
+    msg.className = "formmsg"; msg.textContent = "";
+    try {
+      await api("/api/v1/settings", { method: "POST", json: body });
+      health = await (await fetch("/api/v1/health")).json();
+      renderMode();
+      await openSettings();
+      msg.className = "formmsg ok";
+      msg.textContent = "✓ Saved. " + (offline() ? "AI writing is off." : `New packages will be written by ${health.model}.`);
+      if (!location.hash.includes("job=")) renderHome();
+    } catch (e) { msg.className = "formmsg err"; msg.textContent = e.message; }
+    finally { btn.disabled = false; btn.textContent = "Save"; }
+  }
+  if (!dlg.open) dlg.showModal();
+}
+function route() { const m = location.hash.match(/job=([\w-]+)/); if (m) openJob(m[1]); else renderHome(); }
+window.addEventListener("hashchange", route);
+boot();
+</script>
+</body>
+</html>
