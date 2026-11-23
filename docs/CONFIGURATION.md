@@ -10,7 +10,7 @@ The **OpenAI key, OpenAI model and MeetStream key** can also be set in the dashb
 |---|---|---|
 | `OPENAI_API_KEY` | (unset) | Enables generation with OpenAI (or set it in Settings). `OPENAI_BASE_URL`, `OPENAI_ORG_ID` and `OPENAI_PROJECT_ID` are read by the SDK too. |
 | `CF_LLM` | `openai` if an OpenAI key is set, else `offline` | Force a generator: `openai` or `offline` |
-| `CF_MODEL` | `gpt-6-astra` | OpenAI model id, e.g. `gpt-6.1-sol` for lower cost |
+| `CF_MODEL` | `gpt-5-mini` | OpenAI model id. Use a reasoning model, e.g. `gpt-5` for better writing or `gpt-5-nano` for lower cost |
 | `CF_EFFORT` | `medium` | Reasoning effort: `low` / `medium` / `high` / `xhigh` / `max`. Higher is better and slower. |
 | `MEETSTREAM_API_KEY` | (unset) | Lets you paste meeting links, bot ids and MeetStream links, and uses MeetStream's speaker-labelled transcripts (`ms_…`, from app.meetstream.ai/api-key). Dropped files and recording links work without it. |
 | `CF_WHISPER_MODEL` | `small` | Local speech-to-text model for recordings without a MeetStream transcript: `tiny`, `base`, `small`, `medium`, `large-v3`. Bigger is more accurate and slower; `small` takes about 3 minutes per hour of audio on a laptop CPU. Downloaded once on first use. |

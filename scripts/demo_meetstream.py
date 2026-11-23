@@ -64,12 +64,12 @@ def list_bots(authorization: str | None = Header(None)):
 def bot_detail(bot_id: str, authorization: str | None = Header(None)):
     b = _bot(bot_id, authorization)
     return {"bot_details": {"BotID": bot_id, "MeetingLink": b["link"], "Status": b["status"],
-                            "Platform": b["platform"], "CreatedAt": b["created_at"]}}
+                            "Platform": b["platform"], "CreatedAt": b["created_at"], "transcript_id": f"tr-{bot_id}"}}
 
 
-@app.get("/api/v1/bots/{bot_id}/get_transcript")
-def get_transcript(bot_id: str, authorization: str | None = Header(None)):
-    _bot(bot_id, authorization)
+@app.get("/api/v1/transcript/{transcript_id}/get_transcript")
+def get_transcript(transcript_id: str, authorization: str | None = Header(None)):
+    _bot(transcript_id.removeprefix("tr-"), authorization)
     return json.loads((SAMPLES / "sample_transcript.json").read_text())
 
 

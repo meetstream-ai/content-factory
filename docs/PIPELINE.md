@@ -26,7 +26,7 @@ The weights only drive the progress bar.
 **MeetStream source** (`_ingest_meetstream`):
 
 1. `GET /bots/{id}/detail` gives the platform and creation date. These make the default title, e.g. *"Zoom recording 2026-10-21"*, since bots have no meeting title.
-2. `GET /bots/{id}/get_transcript` returns the speaker-labelled transcript.
+2. `GET /transcript/{transcript_id}/get_transcript` returns the speaker-labelled transcript. The `transcript_id` comes from the bot detail in step 1.
 3. `GET /bots/{id}/get_video` returns a presigned URL, which is downloaded straight away. If the bot has no video, it falls back to `GET /bots/{id}/get_audio`.
 4. HTTP 202 means "still processing", and is retried every 15 s, up to 10 attempts.
 

@@ -293,7 +293,7 @@ class ContentFactory:
             # A MeetStream download link names its bot, so the speaker-labelled transcript may be there.
             client = self.meetstream()
             try:
-                transcript = json.dumps(client.get_transcript(bot_id))
+                transcript = json.dumps(client.get_bot_transcript(bot_id))
                 (wdir / "meetstream_transcript.json").write_text(transcript)
             except MeetStreamError as e:
                 log.info("bot %s: no MeetStream transcript (%s); transcribing locally", bot_id, e)
@@ -333,7 +333,7 @@ class ContentFactory:
             # Keep MeetStream's raw responses next to the recording, for debugging and re-parsing.
             (wdir / "meetstream_bot.json").write_text(json.dumps(detail, indent=1))
 
-            transcript = with_retry_when_processing(client.get_transcript, bot_id)
+            transcript = with_retry_when_processing(client.get_bot_transcript, bot_id, detail)
             (wdir / "meetstream_transcript.json").write_text(json.dumps(transcript))
 
             # Video first (needed for video clips). Audio-only bots, which MeetStream's MCP creates

@@ -212,8 +212,8 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18
     <div class="hint">Picks the best moments and writes the content. Without it, drafts are just the speakers' sentences rearranged. Get one at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.</div>
     <label for="oaModel">OpenAI model</label>
     <input id="oaModel" list="models" autocomplete="off">
-    <datalist id="models"><option value="gpt-6-astra"><option value="gpt-6.1-sol"><option value="gpt-6.1-terra"><option value="gpt-6-luna"></datalist>
-    <div class="hint">gpt-6-astra writes best; gpt-6.1-sol is cheaper.</div>
+    <datalist id="models"><option value="gpt-5-mini"><option value="gpt-5"><option value="gpt-5-nano"></datalist>
+    <div class="hint">gpt-5-mini is the default; gpt-5 writes better, gpt-5-nano is cheaper.</div>
     <label for="msKey">MeetStream API key <span class="keystate" id="msState"></span></label>
     <input id="msKey" type="password" autocomplete="off" spellcheck="false" placeholder="ms_…">
     <div class="hint">Optional. Lets you paste meeting links and bot ids, and uses MeetStream's transcripts with speaker names. Get one at <a href="https://app.meetstream.ai/api-key" target="_blank" rel="noopener">app.meetstream.ai/api-key</a>.</div>

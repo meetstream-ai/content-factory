@@ -64,7 +64,7 @@ All calls go to `https://api.meetstream.ai/api/v1` (override with `MEETSTREAM_BA
 | "Pick from your recent recordings" in the dashboard | `GET /bots?status=&platform=&from=&to=` | `list_bots` | Picking a bot |
 | A meeting link is pasted | `GET /bots` (all pages, up to 20) | `list_bots` | Finding the bot that recorded that meeting |
 | Ingest step 1 | `GET /bots/{bot_id}/detail` | `get_bot_detail` | Platform and date for the default title |
-| Ingest step 2 | `GET /bots/{bot_id}/get_transcript` | `get_transcript` | The speaker-labelled transcript |
+| Ingest step 2 | `GET /transcript/{transcript_id}/get_transcript` | `get_transcript` | The speaker-labelled transcript (`transcript_id` from the bot detail) |
 | Ingest step 3 | `GET /bots/{bot_id}/get_video` | `get_media_urls` (`kind: video`) | Presigned MP4 URL |
 | Fallback | `GET /bots/{bot_id}/get_audio` | `get_media_urls` (`kind: audio`) | Presigned WAV URL, for audio-only bots |
 | Download | `GET <presigned S3 URL>` | | Sent **without** our auth header |

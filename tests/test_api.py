@@ -39,8 +39,9 @@ def fake_meetstream(video_bytes: bytes, calls: list):
         assert request.headers["authorization"] == "Token ms_key"
         if path in ("/api/v1/bots/bot_42/detail", f"/api/v1/bots/{OTHER_BOT}/detail"):
             bot_id = path.split("/")[-2]
-            return httpx.Response(200, json={"bot_details": {"BotID": bot_id, "Platform": "Zoom", "CreatedAt": "2026-10-21T15:00:00Z"}})
-        if path in ("/api/v1/bots/bot_42/get_transcript", f"/api/v1/bots/{OTHER_BOT}/get_transcript"):
+            return httpx.Response(200, json={"bot_details": {"BotID": bot_id, "Platform": "Zoom", "CreatedAt": "2026-10-21T15:00:00Z",
+                                                             "transcript_id": f"tr_{bot_id}"}})
+        if path in ("/api/v1/transcript/tr_bot_42/get_transcript", f"/api/v1/transcript/tr_{OTHER_BOT}/get_transcript"):
             return httpx.Response(200, json=make_meetstream_transcript())
         if path == "/api/v1/bots/bot_42/get_video":
             return httpx.Response(200, json={"video_url": "https://recordings.s3.amazonaws.com/rec.mp4", "video_info": {}})
@@ -99,7 +100,7 @@ def test_meetstream_recording_to_exported_package(env):
     assert job["status"] == "awaiting_review", job["error_message"]
     assert job["progress"] == 100 and job["pending"] == []
     assert job["webinar"]["title"] == "Zoom recording 2026-10-21" and job["webinar"]["has_video"]
-    assert "/api/v1/bots/bot_42/get_transcript" in calls
+    assert "/api/v1/transcript/tr_bot_42/get_transcript" in calls
     assert any(w["code"] == "sensitive_content" for w in job["warnings"])
 
     assets = client.get(f"{P}/jobs/{job['job_id']}/assets").json()
@@ -252,7 +253,7 @@ def test_job_from_a_meetstream_download_link(env):
     job = wait(client, r.json()["job_id"])
     assert job["status"] == "awaiting_review", job["error_message"]
     assert job["webinar"]["source_type"] == "recording_url" and job["webinar"]["title"] == "Meeting recording"
-    assert f"/api/v1/bots/{OTHER_BOT}/get_transcript" in calls and not any(c.startswith("transcribe:") for c in calls)
+    assert f"/api/v1/transcript/tr_{OTHER_BOT}/get_transcript" in calls and not any(c.startswith("transcribe:") for c in calls)
 
     # An expired link is refused before anything starts.
     old = s3_link(OTHER_BOT, datetime.now(timezone.utc) - timedelta(hours=2))
@@ -383,11 +384,11 @@ def test_keys_can_be_set_from_the_dashboard(tmp_path, monkeypatch):
         assert isinstance(gen, OpenAIGenerator) and gen.client.api_key == "sk-good-key-1234"
 
         # Changing only the model re-checks the saved key against it.
-        client.post("/api/v1/settings", json={"openai_model": "gpt-6.1-sol"})
-        assert checked[-1] == ("sk-good-key-1234", "gpt-6.1-sol") and factory.generator.model == "gpt-6.1-sol"
+        client.post("/api/v1/settings", json={"openai_model": "gpt-5"})
+        assert checked[-1] == ("sk-good-key-1234", "gpt-5") and factory.generator.model == "gpt-5"
 
         # Removing the key goes back to offline, and survives a restart.
         assert client.post("/api/v1/settings", json={"openai_api_key": ""}).json()["llm_mode"] == "offline"
     restarted = Settings(data_dir=tmp_path)
     restarted.apply_saved()
-    assert restarted.openai_api_key is None and restarted.model == "gpt-6.1-sol" and restarted.meetstream_api_key == "ms_abcdefgh5678"
+    assert restarted.openai_api_key is None and restarted.model == "gpt-5" and restarted.meetstream_api_key == "ms_abcdefgh5678"

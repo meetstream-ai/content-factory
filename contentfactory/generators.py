@@ -34,6 +34,7 @@ from typing import Protocol, TypeVar
 
 from pydantic import BaseModel
 
+from .config import DEFAULT_MODEL
 from .drafts import (
     BlogDraft, BlogSection, ChapterName, ChapterNames, ClipCandidate, ClipCandidates, ContentBrief,
     EditorialTakeaway, JobConfig, LinkedInPosts, Paragraph, QuoteSet, Slide, SocialPost, Takeaway,
@@ -129,7 +130,7 @@ strong items than reject eight weak ones."""
 class OpenAIGenerator:
     name = "openai"
 
-    def __init__(self, model: str = "gpt-6-astra", effort: str = "medium", client=None, api_key: str | None = None):
+    def __init__(self, model: str = DEFAULT_MODEL, effort: str = "medium", client=None, api_key: str | None = None):
         import openai
 
         self._openai = openai

@@ -13,7 +13,7 @@ and the pipeline share one instance, and a save takes effect for the next job.
 | CF_DATA_DIR           | ./data                               | Database, recordings, renders, exports          |
 | OPENAI_API_KEY        | (unset)                              | Enables generation with OpenAI (or set it in Settings) |
 | CF_LLM                | openai if an OpenAI key is set, else offline | Which generator to use                  |
-| CF_MODEL              | gpt-6-astra                          | OpenAI model id                                 |
+| CF_MODEL              | gpt-5-mini                           | OpenAI model id (a reasoning model)             |
 | CF_EFFORT             | medium                               | Reasoning effort: low / medium / high / xhigh / max |
 | CF_JOB_WORKERS        | 2                                    | Jobs processed at the same time                 |
 | CF_WHISPER_MODEL      | small                                | Local speech-to-text model for recordings without a MeetStream transcript (tiny/base/small/medium) |
@@ -29,6 +29,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+# Default OpenAI model. It must be a reasoning model: generators.py sends `reasoning.effort`.
+DEFAULT_MODEL = "gpt-5-mini"
+
 # Keys the dashboard can save, mapped to the Settings field each one sets.
 SAVABLE = {"openai_api_key": "openai_api_key", "openai_model": "model", "meetstream_api_key": "meetstream_api_key"}
 
@@ -41,7 +44,7 @@ class Settings:
     llm_mode: str = field(
         default_factory=lambda: os.environ.get("CF_LLM", "openai" if os.environ.get("OPENAI_API_KEY") else "offline")
     )
-    model: str = field(default_factory=lambda: os.environ.get("CF_MODEL", "gpt-6-astra"))
+    model: str = field(default_factory=lambda: os.environ.get("CF_MODEL", DEFAULT_MODEL))
     effort: str = field(default_factory=lambda: os.environ.get("CF_EFFORT", "medium"))
     meetstream_api_key: str | None = field(default_factory=lambda: os.environ.get("MEETSTREAM_API_KEY"))
     meetstream_base_url: str = field(
@@ -87,7 +90,7 @@ class Settings:
             saved = json.loads(self.secrets_path.read_text())
         except (FileNotFoundError, json.JSONDecodeError):
             saved = {}
-        env = {"openai_api_key": os.environ.get("OPENAI_API_KEY"), "openai_model": os.environ.get("CF_MODEL", "gpt-6-astra"),
+        env = {"openai_api_key": os.environ.get("OPENAI_API_KEY"), "openai_model": os.environ.get("CF_MODEL", DEFAULT_MODEL),
                "meetstream_api_key": os.environ.get("MEETSTREAM_API_KEY")}
         for key, value in values.items():
             value = (value or "").strip()

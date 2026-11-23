@@ -34,7 +34,7 @@ Every stage goes through `OpenAIGenerator._call`, which uses the Responses API:
 
 ```python
 client.responses.with_raw_response.parse(
-    model="gpt-6-astra",                          # CF_MODEL
+    model="gpt-5-mini",                           # CF_MODEL
     instructions=SYSTEM_PROMPT + "<transcript>…</transcript>",
     input="<stage instructions + chapter table + brief>",
     text_format=SchemaModel,
@@ -109,7 +109,7 @@ Per job there are about 7 model calls: chapter names, clips, brief, then blog, s
 To make it cheaper or faster:
 - **Lower `CF_EFFORT`** (`low`) for short or simple webinars.
 - **Fewer assets**: `clip_count`, `linkedin_post_count`, `quote_count`, `generate_visual_briefs: false`.
-- **Choose a different model** with `CF_MODEL`, e.g. `gpt-6.1-sol` (cheaper) or `gpt-6-luna` (cheapest, for high volume). Measure quality before switching: prompt changes and model changes interact.
+- **Choose a different model** with `CF_MODEL`, e.g. `gpt-5` (better writing) or `gpt-5-nano` (cheaper, for high volume). Use a reasoning model: every request sends `reasoning.effort`. Measure quality before switching: prompt changes and model changes interact.
 
 The app doesn't track token usage yet. Each response's `usage` (including `input_tokens_details.cached_tokens`) is the place to start if you want per-job cost reporting.
 

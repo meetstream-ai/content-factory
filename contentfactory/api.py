@@ -119,7 +119,7 @@ def check_openai_key(key: str, model: str) -> None:
     except (openai.AuthenticationError, openai.PermissionDeniedError):
         raise HTTPException(422, "OpenAI didn't accept that key. Copy it again from platform.openai.com/api-keys.")
     except openai.NotFoundError:
-        raise HTTPException(422, f"That key works, but it can't use the model {model}. Try another model, e.g. gpt-6.1-sol.")
+        raise HTTPException(422, f"That key works, but it can't use the model {model}. Try another model, e.g. gpt-5-mini.")
     except openai.APIConnectionError:
         raise HTTPException(502, "Couldn't reach OpenAI to check the key. Check the internet connection.")
     except openai.APIStatusError as e:

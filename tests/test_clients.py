@@ -10,19 +10,19 @@ import pytest
 from contentfactory.drafts import ChapterNames, JobConfig
 from contentfactory.generators import Chapter, GenContext, GenerationError, OpenAIGenerator
 from contentfactory.meetstream import (
-    MeetStreamClient, MeetStreamNotReady, RecordingLookupError, classify_reference, normalize_meeting_link,
+    MeetStreamClient, MeetStreamError, MeetStreamNotReady, RecordingLookupError, classify_reference, normalize_meeting_link,
     resolve_recording, summarize_bot,
 )
 
 
 def openai_with(handler) -> OpenAIGenerator:
     client = openai.OpenAI(api_key="test", max_retries=0, http_client=httpx2.Client(transport=httpx2.MockTransport(handler)))
-    return OpenAIGenerator(model="gpt-6-astra", effort="medium", client=client)
+    return OpenAIGenerator(model="gpt-5-mini", effort="medium", client=client)
 
 
 def response(content: list[dict], status: str = "completed", incomplete_reason: str | None = None) -> dict:
     """A Responses API body with one assistant message."""
-    return {"id": "resp_1", "object": "response", "created_at": 0, "model": "gpt-6-astra", "status": status,
+    return {"id": "resp_1", "object": "response", "created_at": 0, "model": "gpt-5-mini", "status": status,
             "incomplete_details": {"reason": incomplete_reason} if incomplete_reason else None,
             "output": [{"type": "message", "id": "msg_1", "role": "assistant", "status": status, "content": content}],
             "parallel_tool_calls": True, "tool_choice": "auto", "tools": [],
@@ -54,7 +54,7 @@ def test_openai_request_shape_and_structured_parse(transcript):
 
     body = seen["body"]
     assert seen["path"] == "/v1/responses"
-    assert body["model"] == "gpt-6-astra"
+    assert body["model"] == "gpt-5-mini"
     assert body["reasoning"] == {"effort": "medium"}
     assert body["text"]["format"]["type"] == "json_schema" and body["text"]["format"]["strict"] is True
     assert body["store"] is False
@@ -228,3 +228,24 @@ def test_bot_ids_are_url_encoded_in_paths():
     transport = httpx.MockTransport(lambda req: seen.append(req.url.raw_path) or httpx.Response(200, json={"bot_details": {}}))
     MeetStreamClient("k", base_url="https://api.test/api/v1", transport=transport).get_bot_detail("abc#?x=1")
     assert seen == [b"/api/v1/bots/abc%23%3Fx%3D1/detail"]
+
+
+def test_bot_transcript_is_fetched_by_transcript_id():
+    seen = []
+
+    def handler(req):
+        seen.append(req.url.path)
+        if req.url.path.endswith("/detail"):
+            return httpx.Response(200, json={"bot_details": {"BotID": "b1", "transcript_id": "tr_1"}})
+        return httpx.Response(200, json=[{"speaker": "Ana", "transcript": "Hi."}])
+
+    client = MeetStreamClient("k", base_url="https://api.test/api/v1", transport=httpx.MockTransport(handler))
+    assert client.get_bot_transcript("b1") == [{"speaker": "Ana", "transcript": "Hi."}]
+    assert seen == ["/api/v1/bots/b1/detail", "/api/v1/transcript/tr_1/get_transcript"]
+
+
+def test_bot_without_a_transcript_id():
+    transport = httpx.MockTransport(lambda req: httpx.Response(200, json={"bot_details": {"BotID": "b1"}}))
+    with pytest.raises(MeetStreamError) as excinfo:
+        MeetStreamClient("k", base_url="https://api.test/api/v1", transport=transport).get_bot_transcript("b1")
+    assert excinfo.value.status == 409

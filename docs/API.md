@@ -40,7 +40,7 @@ Errors look like `{"detail": "<message>"}`, or a list of field errors for 422.
 ### `GET /api/v1/health`
 
 ```json
-{"ok": true, "llm_mode": "openai", "model": "gpt-6-astra", "meetstream_configured": true, "auth_required": false,
+{"ok": true, "llm_mode": "openai", "model": "gpt-5-mini", "meetstream_configured": true, "auth_required": false,
  "local_transcription": "small"}
 ```
 
@@ -53,7 +53,7 @@ Errors look like `{"detail": "<message>"}`, or a list of field errors for 422.
 The keys the app is using, without revealing them:
 
 ```json
-{"openai_api_key": {"set": true, "source": "saved", "hint": "…1234"}, "openai_model": "gpt-6-astra",
+{"openai_api_key": {"set": true, "source": "saved", "hint": "…1234"}, "openai_model": "gpt-5-mini",
  "meetstream_api_key": {"set": false, "source": null, "hint": null}, "llm_mode": "openai"}
 ```
 
@@ -63,7 +63,7 @@ The keys the app is using, without revealing them:
 
 ```bash
 curl -X POST $B/api/v1/settings -H 'Content-Type: application/json' \
-  -d '{"openai_api_key": "sk-...", "openai_model": "gpt-6-astra", "meetstream_api_key": "ms_..."}'
+  -d '{"openai_api_key": "sk-...", "openai_model": "gpt-5-mini", "meetstream_api_key": "ms_..."}'
 ```
 
 Fields left out are unchanged; `""` removes a saved value. A new key is checked first (OpenAI: `models.retrieve` of the model; MeetStream: List Bots), and a key the service refuses returns **422** with the reason and saves nothing. On success the values are saved to `data/secrets.json` (mode 600) and used from the next job on. Returns the same shape as `GET`.

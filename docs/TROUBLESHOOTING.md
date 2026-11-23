@@ -8,10 +8,10 @@ A failed job shows `error_message` as `"<stage>: <reason>"`, both in the dashboa
 |---|---|---|
 | Badge says **AI writing off** | No OpenAI key | Click it and add the key in Settings (or `export OPENAI_API_KEY=…` and restart) |
 | Settings says *OpenAI didn't accept that key* | Typo, revoked key, or a key from a different provider | Copy it again from platform.openai.com/api-keys |
-| Settings says *That key works, but it can't use the model …* | Your OpenAI project has no access to that model | Pick another model in Settings, e.g. `gpt-6.1-sol` |
+| Settings says *That key works, but it can't use the model …* | Your OpenAI project has no access to that model | Pick another model in Settings, e.g. `gpt-5-mini` |
 | The home page says MeetStream isn't connected | `MEETSTREAM_API_KEY` not set | Meeting links and bot ids need it: export it and restart. Recording links and dropped files work without it. |
 | `ffmpeg is not installed` | FFmpeg not on PATH | `brew install ffmpeg` / `apt install ffmpeg` |
-| `No such filter: 'subtitles'` in a render error | FFmpeg built without libass | Install a full build (Homebrew's `ffmpeg` has it) or set `burn_captions: false` |
+| `No such filter: 'subtitles'` in a render error | FFmpeg built without libass | Install a build with libass (Homebrew's `ffmpeg` formula does not include it; Debian/Ubuntu `apt install ffmpeg` does) or set `burn_captions: false` |
 | `make_sample.py` fails on `say` | Not macOS | Use your MeetStream account instead of the sample |
 | `ModuleNotFoundError: contentfactory` | Package not installed | `uv pip install -e ".[mcp,dev]"` |
 | API returns 401 everywhere | `CF_API_TOKEN` is set | Send `Authorization: Bearer <token>`; the dashboard prompts for it once |

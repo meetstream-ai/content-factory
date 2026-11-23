@@ -10,7 +10,7 @@ You can start from **a recording file you already have**: drop it in and it's tr
 |---|---|---|
 | Python 3.11+ | `python3 --version` | python.org, or `brew install python@3.12` |
 | [uv](https://docs.astral.sh/uv/) (recommended) | `uv --version` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| FFmpeg with libass and libfreetype | `ffmpeg -filters \| grep subtitles` | `brew install ffmpeg` / `apt install ffmpeg` |
+| FFmpeg with libass and libfreetype | `ffmpeg -filters \| grep subtitles` | `apt install ffmpeg` (Debian/Ubuntu). Homebrew's `ffmpeg` formula has no libass, so on macOS install a build that has it, or set `burn_captions: false` |
 | macOS (only for the sample webinar) | `which say` | Elsewhere, use any recording you have |
 
 ## Part 1: Install
@@ -29,7 +29,7 @@ Check that it works:
 .venv/bin/python -m pytest -q
 ```
 
-You should see `40 passed`. The tests render real video with FFmpeg, so they take about 20 seconds.
+You should see `53 passed`. The tests render real video with FFmpeg, so they take about 20 seconds. Without the `subtitles` filter, `test_meetstream_recording_to_exported_package` fails because the clips can't be burned in.
 
 ## Part 2: Start the app
 
@@ -76,7 +76,7 @@ The ZIP has `manifest.json`, `blog.md` (if you approved the blog), the clips, ca
 
 Get an API key from https://platform.openai.com/api-keys. In the dashboard, click **Settings** (or the **AI writing off · add key** badge), paste the key and click **Save**. It's checked with OpenAI first: a wrong key, or a key that can't use the chosen model, is refused with the reason. Saved keys go in `data/secrets.json` (readable only by you) and are used from the next package on, with no restart.
 
-The badge now reads **AI: gpt-6-astra**, and cards get a **Rewrite with AI** button. Make a package from the same recording again: OpenAI now picks the clips and actually writes the chapter titles, blog, posts and briefs. Expect a few minutes even for a short recording, most of it waiting on the model. The blog, posts and quotes are generated in parallel to keep that down.
+The badge now reads **AI: gpt-5-mini**, and cards get a **Rewrite with AI** button. Make a package from the same recording again: OpenAI now picks the clips and actually writes the chapter titles, blog, posts and briefs. Expect a few minutes even for a short recording, most of it waiting on the model. The blog, posts and quotes are generated in parallel to keep that down.
 
 You can also set keys as environment variables instead (`export OPENAI_API_KEY=sk-...` before starting the app, or put them in `.env` and run `set -a; source .env; set +a`). A key saved in Settings takes precedence.
 

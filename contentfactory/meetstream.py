@@ -112,13 +112,25 @@ class MeetStreamClient:
 
     # ------------------------------------------------------------ transcripts
 
-    def get_transcript(self, bot_id: str) -> Any:
-        """`GET /bots/{id}/get_transcript`: the processed, speaker-labelled transcript.
+    def get_transcript(self, transcript_id: str) -> Any:
+        """`GET /transcript/{transcript_id}/get_transcript`: the processed, speaker-labelled transcript.
 
-        Resolves the transcript id from the bot id for us. The body is a list of utterances in
-        one of MeetStream's formats; `ingest.parse_transcript` understands all of them.
+        The body is a list of utterances in one of MeetStream's formats;
+        `ingest.parse_transcript` understands all of them.
         """
-        return self._get(f"/bots/{quote(bot_id, safe='')}/get_transcript")
+        return self._get(f"/transcript/{quote(transcript_id, safe='')}/get_transcript")
+
+    def get_bot_transcript(self, bot_id: str, detail: dict | None = None) -> Any:
+        """The transcript of a bot: `transcript_id` from `GET /bots/{id}/detail`, then `get_transcript`.
+
+        Pass `detail` when it was already fetched, to skip the second lookup.
+        """
+        if detail is None:
+            detail = self.get_bot_detail(bot_id)
+        transcript_id = detail.get("transcript_id")
+        if not transcript_id:
+            raise MeetStreamError(f"bot {bot_id}: no transcript (transcription was not enabled, or the bot was never admitted)", 409)
+        return self.get_transcript(transcript_id)
 
     def list_transcriptions(self, bot_id: str) -> list[dict]:
         """`GET /bots/{id}/transcriptions`: every transcription run with provider and status."""
